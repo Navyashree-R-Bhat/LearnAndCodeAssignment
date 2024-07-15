@@ -1,6 +1,7 @@
 #pragma once
 
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <sys/socket.h>
 #include <string>
 
@@ -11,9 +12,12 @@ class SocketConnection
 public:
     int clientSocket;
     int serverSocket;
-    sockaddr_in serverAddress; 
+    int port;
+    std::string serverAddress;
+    sockaddr_in address; 
 
-    SocketConnection();
+    SocketConnection(int port);
+    void createSocket();
     void connectToServer();
     void receiveMessage();
     void sendMessage(const std::string& message);

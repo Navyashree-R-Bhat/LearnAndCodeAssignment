@@ -1,17 +1,25 @@
-#include "../inc/dbConnection.h"
+#include "dbConnection.h"
 
-void DatabaseConnection::connectDB()
+DatabaseConnection::DatabaseConnection()
 {
     driver = sql::mysql::get_mysql_driver_instance();
     connection = driver->connect("tcp://127.0.0.1:3306", "navyashree", "");
 
     connection->setSchema("Cafeteria");
-
-    statement = connection->createStatement();
 }
 
-int main()
+DatabaseConnection::~DatabaseConnection()
 {
-    DatabaseConnection db;
-    db.connectDB();
+    delete connection;
 }
+
+sql::Connection* DatabaseConnection::getConnection()
+{
+    return connection;
+}
+
+// int main()
+// {
+//     DatabaseConnection db;
+//     db.connectDB();
+// }

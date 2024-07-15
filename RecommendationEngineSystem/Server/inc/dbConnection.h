@@ -13,9 +13,9 @@ class DatabaseConnection
 public:
     sql::mysql::MySQL_Driver *driver;
     sql::Connection *connection;
-    sql::Statement *statement;
-    sql::ResultSet *result;
     
-    void connectDB();
+    DatabaseConnection();
+    ~DatabaseConnection();
+    sql::Connection* getConnection();
 
 };
