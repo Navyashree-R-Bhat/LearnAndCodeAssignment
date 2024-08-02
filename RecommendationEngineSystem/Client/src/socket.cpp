@@ -60,10 +60,4 @@ SocketConnection::~SocketConnection()
     close(clientSocket);
 }
 
-int main() 
-{
-    SocketConnection client(8080);
-    client.sendMessage("Hello, server!");
-    // client.receiveMessage();
-	return 0; 
-}
+

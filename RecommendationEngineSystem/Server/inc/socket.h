@@ -8,6 +8,7 @@
 #include <thread>
 
 #include "dbConnection.h"
+#include "employee.h"
 
 #define PORT 8080 
 
@@ -35,5 +36,8 @@ public:
     void run();
     void initializeDatabase();
     void stopServer();
+    bool validateUser(const std::string& userId, const std::string& password);
+    bool addEmployeeToDatabase(Employee& employee);
+    bool deleteEmployeeFromDatabase(const std::string& userId);
     // ~SocketConnection();
 };
