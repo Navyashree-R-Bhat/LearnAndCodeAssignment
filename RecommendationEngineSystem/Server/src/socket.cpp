@@ -49,7 +49,7 @@ void SocketConnection::initializeDatabase()
                            "password VARCHAR(255) NOT NULL,"
                            "role ENUM('admin', 'chef', 'employee') NOT NULL)");
         statement->execute("CREATE TABLE IF NOT EXISTS MenuItems("
-                           "item_id INT AUTO_INCREMENT PRIMARY KEY,"
+                           "item_id INT  PRIMARY KEY,"
                            "item_name VARCHAR(255) NOT NULL,"
                            "price DECIMAL(10, 2) NOT NULL,"
                            "availability_status BOOLEAN NOT NULL)");
@@ -131,11 +131,12 @@ void SocketConnection::handleRequest()
         if (command == "VALIDATE")
         {
             std::cout << "Validate" << std::endl;
-            std::string userId, password;
+            std::string userId, password, role;
             std::getline(ss, userId, ':');
             std::getline(ss, password, ':');
+            std::getline(ss, role, ':');
             std::cout << userId << "  " << password << std::endl;
-            if (validateUser(userId, password))
+            if (validateUser(userId, password, role))
             {
                 response = "success";
             }
@@ -199,19 +200,21 @@ void SocketConnection::run()
     }
 }
 
-bool SocketConnection::validateUser(const std::string &userId, const std::string &password)
+bool SocketConnection::validateUser(const std::string &userId, const std::string &password, const std::string &role)
 {
     try
     {
-        std::unique_ptr<sql::PreparedStatement> pStatement(database->getConnection()->prepareStatement("SELECT password FROM Users WHERE user_id = ?"));
+        std::unique_ptr<sql::PreparedStatement> pStatement(database->getConnection()->prepareStatement("SELECT password, role FROM Users WHERE user_id = ?"));
         pStatement->setString(1, userId);
 
         std::unique_ptr<sql::ResultSet> result(pStatement->executeQuery());
         if (result->next())
         {
             std::string storedPassword = result->getString("password");
+            auto storedRole = result->getInt("role");
             std::cout << "Stored Password" << storedPassword << std::endl;
-            return storedPassword == password;
+            std::cout << "Stored Role" << storedRole << std::endl;
+            return storedPassword == password && storedRole == Utilities::getRoleEnum(role);
         }
     }
     catch (sql::SQLException &exception)

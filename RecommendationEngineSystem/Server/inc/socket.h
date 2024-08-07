@@ -9,8 +9,10 @@
 
 #include "dbConnection.h"
 #include "employee.h"
+#include "Utilities.h"
 
-#define PORT 8080 
+#define PORT 8080
+
 
 class SocketConnection
 {
@@ -36,7 +38,7 @@ public:
     void run();
     void initializeDatabase();
     void stopServer();
-    bool validateUser(const std::string& userId, const std::string& password);
+    bool validateUser(const std::string& userId, const std::string& password, const std::string &role);
     bool addEmployeeToDatabase(Employee& employee);
     bool deleteEmployeeFromDatabase(const std::string& userId);
     // ~SocketConnection();

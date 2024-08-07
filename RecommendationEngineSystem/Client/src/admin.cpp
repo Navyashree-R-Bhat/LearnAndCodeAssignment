@@ -27,3 +27,21 @@ std::string Admin::requestToDeleteEmployee()
     std::string message = "DELETE_USER:"+userId;
     return message;
 }
+
+std::string Admin::requestToAddMenuItem()
+{
+    int itemId, itemPrice;
+    std::string itemName;
+    bool availabilityStatus;
+
+    std::cout<<"Enter the ID to be assigned to the item: ";
+    std::cin>>itemId;
+    std::cout<<"Enter the name of the item: ";
+    std::cin>>itemName;
+    std::cout<<"Enter the price for the item: ";
+    std::cin>>itemPrice;
+    std::cout<<"Enter the availability status of the item: ";
+    std::cin>>availabilityStatus;
+
+    
+}

@@ -21,7 +21,7 @@ public:
     void adminDisplayScreen();
     void chefDisplayScreen();
     void employeeDisplayScreen();
-    bool authenticateUser(const std::string &userId, const std::string &password);
+    bool authenticateUser(const std::string &userId, const std::string &password, const std::string &role);
     void sendRequestToServer(const std::string &request);
 
 private:
