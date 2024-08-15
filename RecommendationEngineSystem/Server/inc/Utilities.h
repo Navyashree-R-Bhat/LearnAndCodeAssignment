@@ -5,5 +5,6 @@
 class Utilities
 {
 public:
-    static int getRoleEnum(const std::string &role);
+    static std::string getRoleEnum(const std::string &role);
+    static bool stringToBool(const std::string& str);
 };

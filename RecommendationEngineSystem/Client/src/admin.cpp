@@ -24,7 +24,7 @@ std::string Admin::requestToDeleteEmployee()
     std::cout<<"Enter User ID to delete: ";
     std::cin>>userId;
 
-    std::string message = "DELETE_USER:"+userId;
+    std::string message = "DELETE_USER:" + userId;
     return message;
 }
 
@@ -43,5 +43,22 @@ std::string Admin::requestToAddMenuItem()
     std::cout<<"Enter the availability status of the item: ";
     std::cin>>availabilityStatus;
 
+    std::string message = "ADD_MENU_ITEM:" + std::to_string(itemId) + ":" + itemName + ":" + std::to_string(itemPrice) + ":" + (availabilityStatus ? "true":"false");
+    return message;
+}
+
+std::string Admin::requestToDeleteMenuItem()
+{
+    int itemId;
+    std::cout<<"Enter menu item ID to delete: ";
+    std::cin>>itemId;
     
+    std::string message = "DELETE_MENU_ITEM:"+std::to_string(itemId);
+    return message;
+}
+
+std::string Admin::requestToViewMenuItem()
+{
+    std::string message = "VIEW_MENU_ITEMS";
+    return message;
 }

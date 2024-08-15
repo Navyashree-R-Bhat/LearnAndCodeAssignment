@@ -1,21 +1,25 @@
 #include "Utilities.h"
 
-int Utilities::getRoleEnum(const std::string &role)
+std::string Utilities::getRoleEnum(const std::string &role)
 {
     if(role=="admin")
     {
-        return 0;
+        return "admin";
     }
     else if(role=="chef")
     {
-        return 1;
+        return "chef";
     }
     else if(role=="employee")
     {
-        return 2;
+        return "employee";
     }
     else
     {
         throw std::runtime_error("Unknown role integer: ");
     }
+}
+
+bool Utilities::stringToBool(const std::string& str) {
+    return str == "true" || str == "1";
 }

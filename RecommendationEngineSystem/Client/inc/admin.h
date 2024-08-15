@@ -18,4 +18,5 @@ public:
     std::string requestToDeleteEmployee();
     std::string requestToAddMenuItem();
     std::string requestToDeleteMenuItem();
+    std::string requestToViewMenuItem();
 };

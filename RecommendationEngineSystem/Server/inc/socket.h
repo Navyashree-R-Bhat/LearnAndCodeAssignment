@@ -6,9 +6,13 @@
 #include <sstream>
 #include <cstring>
 #include <thread>
+#include <vector>
 
 #include "dbConnection.h"
 #include "employee.h"
+#include "menuItem.h"
+#include "feedback.h"
+#include "dailyMenu.h"
 #include "Utilities.h"
 
 #define PORT 8080
@@ -19,7 +23,7 @@ class SocketConnection
 public:
     int port;
     int addressLength;
-    const int bufferSize = 1024;
+    const int bufferSize = 4096;
     int serverSocket;
     int clientSocket;
     sockaddr_in serverAddress;
@@ -29,9 +33,9 @@ public:
     SocketConnection(int port, DatabaseConnection *database);
     void bindingSocket();
     void createSocket();
-    void handleRequest();
+    void handleRequest(int clientSocket);
     void listeningToSocket();
-    void accpetingConnection();
+    int accpetingConnection();
     void receiveMessage(int clientSocket);
     void sendMessage(const std::string& message);
     static void waitForExit(SocketConnection& server);
@@ -41,5 +45,10 @@ public:
     bool validateUser(const std::string& userId, const std::string& password, const std::string &role);
     bool addEmployeeToDatabase(Employee& employee);
     bool deleteEmployeeFromDatabase(const std::string& userId);
+    bool addMenuItemToDatabase(MenuItem& menuItem);
+    bool deleteMenuItemFromDatabase(const int& itemId);
+    std::vector<MenuItem> viewMenuItem();
+    bool addFeedbackToDatabase(Feedback& feedback);
+    std::vector<DailyMenu> getRolledOutMenuFromDatabase();
     // ~SocketConnection();
 };
