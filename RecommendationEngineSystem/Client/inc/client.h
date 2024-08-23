@@ -31,6 +31,7 @@ public:
     void sendFeedback();
     void sendRequestToServerToRollOutMenu(const std::string &request);
     void sendRequestToServerToViewRolledOutMenu(const std::string &request);
+    void getRecommendations();
 ;
 private:
     SocketConnection client;

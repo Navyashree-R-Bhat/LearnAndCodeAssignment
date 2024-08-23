@@ -25,6 +25,11 @@ void MenuItem::setAvailabilityStatus(const bool& availabilityStatus)
     availabilityStatus_ = availabilityStatus;
 }
 
+void MenuItem::setRating(const int& rating)
+{
+    rating_ = rating;
+}
+
 int MenuItem::getItemId()
 {
     return itemId_;
@@ -44,3 +49,9 @@ bool MenuItem::getAvailabilityStatus()
 {
     return availabilityStatus_;
 }
+
+int MenuItem::getRating()
+{
+    return rating_;
+}
+

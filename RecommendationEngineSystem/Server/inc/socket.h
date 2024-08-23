@@ -13,6 +13,7 @@
 #include "menuItem.h"
 #include "feedback.h"
 #include "dailyMenu.h"
+#include "recommendationEngine.h"
 #include "Utilities.h"
 
 #define PORT 8080

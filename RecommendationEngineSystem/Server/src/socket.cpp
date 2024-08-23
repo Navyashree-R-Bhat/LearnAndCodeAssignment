@@ -319,13 +319,37 @@ void SocketConnection::handleRequest(int clientSocket)
             std::cout<<"Viewing rolled out menu"<<std::endl;
             auto rolledOutMenuItemList = getRolledOutMenuFromDatabase();
 
-            std::string responseData;
+            std::string responseData="";
             for (auto& item : rolledOutMenuItemList)
             {
                 responseData += item.getMenuDate() + ":" + std::to_string(item.getItemId()) + ":" + item.getItemName() + ":" + std::to_string(item.getItemPrice()) + ":" + std::to_string(item.getRating()) + "|";
             }
 
             if(!responseData.empty())
+            {
+                responseData.pop_back();
+            }
+            if(responseData.empty())
+            {
+                response = "Daily Menu not yet rolled out";
+            }
+            else
+            {
+                response = responseData;
+            }
+        }
+        else if(command == "GET_RECOMMENDATION")
+        {
+            RecommendationEngine recommendation(database);
+            auto recommendedItems = recommendation.getRecommendedMenuItems(2);
+
+            std::string responseData;
+            for (auto& item:recommendedItems)
+            {
+                responseData += std::to_string(item.first.getItemId()) + ":" + item.first.getItemName() + ":" + std::to_string(item.first.getItemPrice()) + ":" + std::to_string(item.first.getAvailabilityStatus()) + ":" + std::to_string(item.first.getRating()) + "|";
+            }
+
+            if (!responseData.empty())
             {
                 responseData.pop_back();
             }

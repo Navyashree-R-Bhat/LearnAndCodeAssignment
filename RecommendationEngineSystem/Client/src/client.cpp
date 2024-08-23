@@ -215,6 +215,7 @@ void Client::chefDisplayScreen()
                         break;
                     case 2:
                         //Recommendation
+                        getRecommendations();
                         break;
                     case 3:
                         //Roll out Menu
@@ -374,6 +375,7 @@ void Client::sendRequestToServerToViewRolledOutMenu(const std::string& message)
         menuItems.push_back(menuItem);
     }
     std::cout<<"\nDAILY MENU LIST\n";
+    std::cout<<response<<std::endl;
     for(const auto &item : menuItems)
     {
         std::istringstream itemStream(item);
@@ -386,10 +388,52 @@ void Client::sendRequestToServerToViewRolledOutMenu(const std::string& message)
         if(fields.size() == 5)
         {
             std::cout <<"Date: " << fields[0]
-                      << "ID: " << fields[1]
-                      << "\tName: " << fields[2]
-                      << "\tPrice: " <<fields[3]
-                      << "\t\t Rating: " << fields[4] << std::endl;
+                    << "ID: " << fields[1]
+                    << "\tName: " << fields[2]
+                    << "\tPrice: " <<fields[3]
+                    << "\t\t Rating: " << fields[4] << std::endl;
+        }
+    }
+}
+
+void Client::getRecommendations()
+{
+    std::string request = "GET_RECOMMENDATION";
+    send(client.clientSocket, request.c_str(), request.length(), 0);
+    std::cout << "Recommendation request sent\n";
+
+    int bufferSize = 1024;
+    char buffer[bufferSize] = {0};
+    read(client.clientSocket, buffer, bufferSize);
+
+    std::string response(buffer);
+
+    std::istringstream recommendationsStream(response);
+    std::string recommendation;
+    std::vector<std::string> recommendations;
+    while (std::getline(recommendationsStream, recommendation, '|'))
+    {
+        recommendations.push_back(recommendation);
+    }
+
+    std::cout << "Recommendations received:\n";
+    for (const auto &rec : recommendations)
+    {
+        std::istringstream recommendationStream(rec);
+        std::string token;
+        std::vector<std::string> fields;
+        while (std::getline(recommendationStream, token, ':'))
+        {
+            fields.push_back(token);
+        }
+
+        if (fields.size() == 5)
+        {
+            std::cout << "Food Item: " << fields[1] << "\n";
+            std::cout << "Price: " << fields[2] << "\n";
+            std::cout << "Rating: " << fields[4] << "\n";
+            std::cout << "Availability: " << (fields[3] == "1" ? "Yes" : "No") << "\n";
+            std::cout << "------------------\n";
         }
     }
 }
