@@ -24,7 +24,7 @@ class SocketConnection
 public:
     int port;
     int addressLength;
-    const int bufferSize = 4096;
+    const int bufferSize = 1024;
     int serverSocket;
     int clientSocket;
     sockaddr_in serverAddress;
@@ -51,5 +51,8 @@ public:
     std::vector<MenuItem> viewMenuItem();
     bool addFeedbackToDatabase(Feedback& feedback);
     std::vector<DailyMenu> getRolledOutMenuFromDatabase();
+    bool addNotificationToDatabase(const std::string& notificationMessage);
+    std::vector<std::string> getNotificationsFromDatabase(const std::string& employeeId);
+    bool deleteNotificationsFromDatabase(const std::string& userId);
     // ~SocketConnection();
 };

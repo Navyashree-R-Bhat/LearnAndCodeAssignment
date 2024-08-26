@@ -4,10 +4,10 @@ void Client::sendRequestToServer(const std::string& request)
 {
     send(client.clientSocket, request.c_str(), request.size(), 0);
 
-    int bufferSize = 4096;
+    int bufferSize = 1024;
     char response[bufferSize] = {0};
     read(client.clientSocket, response, bufferSize);
-    std::cout<<"Response: "<<response<<std::endl;
+    std::cout<<response<<std::endl;
 }
 
 void Client::start()
@@ -17,7 +17,7 @@ void Client::start()
         int choice;
         std::cout << "************CAFETERIA************" << std::endl;
         std::cout << "Users: " << std::endl;
-        std::cout << "1.ADMIN\n2.CHEF\n3.EMPLOYEE" << std::endl;
+        std::cout << "1.ADMIN\n2.CHEF\n3.EMPLOYEE\n4.Exit Application" << std::endl;
         std::cout << "Enter the choice to login: ";
         std::cin >> choice;
 
@@ -44,6 +44,8 @@ void Client::start()
                 // Employee
                 employeeDisplayScreen();
                 break;
+            case 4:
+                return;
             default:
                 std::cout << "You entered an invalid choice." << std::endl;
             }
@@ -55,13 +57,12 @@ bool Client::authenticateUser(const std::string &userId, const std::string &pass
 {
     bool status = false;
     std::string request = "VALIDATE:" + userId + ":" + password + ":" + role;
-    std::cout << "Request: " << request << std::endl;
     send(client.clientSocket, request.c_str(), request.length(), 0);
     std::cout << "Authentication request sent\n";
-    const int bufferSize = 4096;
+    const int bufferSize = 1024;
     char buffer[bufferSize] = {0};
     read(client.clientSocket, buffer, sizeof(buffer));
-    std::cout << "Response from server: " << buffer << std::endl;
+
     if (!strcmp(buffer, "success"))
     {
         status = true;
@@ -77,7 +78,7 @@ void Client::adminDisplayScreen()
     std::cin >> userId;
     std::cout << "Enter password: ";
     std::cin >> password;
-    // std::cout << "AuthenticateUser: " << authenticateUser(userId, password);
+
     if(authenticateUser(userId, password, "admin"))
     {
         Admin admin(userId, "ADMIN", password);
@@ -96,8 +97,8 @@ void Client::adminDisplayScreen()
             std::cin>>choice;
             if (std::cin.fail()) 
             {
-                std::cin.clear(); // Clear the error flag
-                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Ignore the invalid input
+                std::cin.clear();
+                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
                 std::cout << "Invalid input. Please enter a valid number." << std::endl;
                 continue;
             } 
@@ -113,6 +114,7 @@ void Client::adminDisplayScreen()
                     case 2:
                         request = admin.requestToAddMenuItem();
                         sendRequestToServer(request);
+                        sendRequestToAddNotification("New Food item added");
                         break;
                     case 3:
                         request = admin.requestToViewMenuItem();
@@ -134,6 +136,10 @@ void Client::adminDisplayScreen()
             }
         }
     }
+    else
+    {
+        std::cout<<"Invalid credentials\n"<<std::endl;
+    }
 }
 
 void Client::sendRequestToServerToViewMenuItem(const std::string& request)
@@ -141,7 +147,7 @@ void Client::sendRequestToServerToViewMenuItem(const std::string& request)
     send(client.clientSocket, request.c_str(), request.size(), 0);
     std::cout<<"View menu request sent"<<std::endl;
 
-    int bufferSize = 4096;
+    int bufferSize = 1024;
     char response[bufferSize] = {0};
     read(client.clientSocket, response, bufferSize);
 
@@ -176,6 +182,55 @@ void Client::sendRequestToServerToViewMenuItem(const std::string& request)
     }
 }
 
+void Client::sendRequestToAddNotification(const std::string &notificationMessage)
+{
+    std::string request;
+    request = "ADD_NOTIFICATION:" + notificationMessage;
+    sendRequestToServer(request);
+}
+
+void Client::sendRequestToViewNotification(const std::string &userId)
+{
+    std::string request = "GET_NOTIFICATIONS:" + userId;
+    send(client.clientSocket, request.c_str(), request.size(), 0);
+
+    int bufferSize = 1024;
+    char response[bufferSize] = {0};
+    read(client.clientSocket, response, bufferSize);
+
+    std::istringstream notificationStream(response);
+    std::string notification, responseMessage;
+    std::vector<std::string> notificationsList;
+
+    std::cout<<"\nNotifications\n";
+    std::getline(notificationStream, responseMessage, ':');
+    std::cout<<responseMessage<<std::endl;
+    while(std::getline(notificationStream, notification, '|'))
+    {
+        notificationsList.push_back(notification);
+    }
+    for(const auto &notificationMessage : notificationsList)
+    {
+        std::istringstream notificationMessageStream(notificationMessage);
+        std::string notification;
+        while(std::getline(notificationMessageStream, notification, ':'))
+        {
+            std::cout<<"--->"<<notification<<std::endl;
+        }
+    }
+    sendRequestToDeleteNotifications(userId);
+}
+
+void Client::sendRequestToDeleteNotifications(const std::string &userId)
+{
+    std::string request = "DELETE_NOTIFICATIONS:" + userId;
+    send(client.clientSocket, request.c_str(), request.size(), 0);
+
+    int bufferSize = 1024;
+    char response[bufferSize] = {0};
+    read(client.clientSocket, response, bufferSize);
+}
+
 void Client::chefDisplayScreen()
 {
     std::string userId, password;
@@ -199,8 +254,8 @@ void Client::chefDisplayScreen()
             std::cin>>choice;
             if (std::cin.fail()) 
             {
-                std::cin.clear(); // Clear the error flag
-                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Ignore the invalid input
+                std::cin.clear();
+                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
                 std::cout << "Invalid input. Please enter a valid number." << std::endl;
                 continue;
             }
@@ -243,6 +298,7 @@ void Client::employeeDisplayScreen()
     std::cin>>password;
     if (authenticateUser(userId, password, "employee"))
     {
+        sendRequestToViewNotification(userId);
         Employee employee(userId, userName, password);
         int choice = 0;
         while(choice != 5)
@@ -315,7 +371,7 @@ void Client::sendFeedback()
     send(client.clientSocket, message.c_str(), message.length(), 0);
     std::cout<<"Feedback sent"<<std::endl;
 
-    int bufferSize = 4096;
+    int bufferSize = 1024;
     char response[bufferSize] = {0};
     read(client.clientSocket, response, bufferSize);
     std::cout<<"Response from server: "<<response<<std::endl;
@@ -352,7 +408,7 @@ void Client::sendRequestToServerToRollOutMenu(const std::string& message)
     send(client.clientSocket, request.c_str(), request.length(), 0);
     std::cout<<"Roll Out Menu Request sent"<<std::endl;
 
-    int bufferSize = 4096;
+    int bufferSize = 1024;
     char response[bufferSize] = {0};
     read(client.clientSocket, response, bufferSize);
     std::cout<<"Response from server: "<<response<<std::endl;
@@ -361,21 +417,22 @@ void Client::sendRequestToServerToRollOutMenu(const std::string& message)
 void Client::sendRequestToServerToViewRolledOutMenu(const std::string& message)
 {
     send(client.clientSocket, message.c_str(), message.length(), 0);
-    std::cout<<"Roll Out request sent"<<std::endl;
 
-    int bufferSize = 4096;
+    int bufferSize = 1024;
     char response[bufferSize] = {0};
     read(client.clientSocket, response, bufferSize);
-    // std::string rollOutResponse(response);
+    
     std::istringstream menuStream(response);
-    std::string menuItem;
+    std::string menuItem, responseMessage;
     std::vector<std::string> menuItems;
+
+    std::cout<<"\nDAILY MENU LIST\n";
+    std::getline(menuStream, responseMessage, ':');
+    std::cout<<responseMessage<<std::endl;
     while(std::getline(menuStream, menuItem, '|'))
     {
         menuItems.push_back(menuItem);
     }
-    std::cout<<"\nDAILY MENU LIST\n";
-    std::cout<<response<<std::endl;
     for(const auto &item : menuItems)
     {
         std::istringstream itemStream(item);

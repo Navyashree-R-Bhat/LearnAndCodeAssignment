@@ -135,7 +135,6 @@ double SentimentAnalyser::calculateSentimentScore(const std::string& comment)
         std::cout<<word<<std::endl;
         std::transform(word.begin(), word.end(), word.begin(), ::tolower);
         word.erase(std::remove_if(word.begin(), word.end(), ::ispunct), word.end());
-std::cout<<"If:"<<std::endl;
         if (isNegationWord(word)) {
             negation = true;
             negationEffectCounter = 5;

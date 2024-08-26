@@ -32,6 +32,9 @@ public:
     void sendRequestToServerToRollOutMenu(const std::string &request);
     void sendRequestToServerToViewRolledOutMenu(const std::string &request);
     void getRecommendations();
+    void sendRequestToAddNotification(const std::string &notificationMessage);
+    void sendRequestToViewNotification(const std::string &userId);
+    void sendRequestToDeleteNotifications(const std::string &userId);
 ;
 private:
     SocketConnection client;

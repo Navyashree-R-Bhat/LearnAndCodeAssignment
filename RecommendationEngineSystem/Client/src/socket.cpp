@@ -50,7 +50,7 @@ void SocketConnection::sendMessage(const std::string& message)
 
 void SocketConnection::receiveMessage()
 {
-    char buffer[4096] = {0};
+    char buffer[1024] = {0};
     int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
     std::cout << "Message from server: " << buffer << std::endl;
 }

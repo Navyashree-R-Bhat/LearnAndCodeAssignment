@@ -32,16 +32,57 @@ std::string Admin::requestToAddMenuItem()
 {
     int itemId, itemPrice;
     std::string itemName;
+    char availabilityStatusUserInput;
     bool availabilityStatus;
 
-    std::cout<<"Enter the ID to be assigned to the item: ";
-    std::cin>>itemId;
-    std::cout<<"Enter the name of the item: ";
-    std::cin>>itemName;
-    std::cout<<"Enter the price for the item: ";
-    std::cin>>itemPrice;
-    std::cout<<"Enter the availability status of the item: ";
-    std::cin>>availabilityStatus;
+    while(true)
+    {
+        std::cout<<"Enter the ID to be assigned to the item: ";
+        std::cin>>itemId;
+        if (std::cin.fail()) 
+        {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "Invalid input. Please enter a valid number." << std::endl;
+            continue;
+        } 
+        std::cout<<"Enter the name of the item: ";
+        std::cin>>itemName;
+        std::cout<<"Enter the price for the item: ";
+        std::cin>>itemPrice;
+        if (std::cin.fail()) 
+        {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "Invalid input. Please enter a valid number." << std::endl;
+            continue;
+        } 
+        std::cout<<"Enter the availability status of the item[y/n]: ";
+        std::cin>>availabilityStatusUserInput;
+        if (std::cin.fail()) 
+        {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "Invalid input. Please enter a valid number." << std::endl;
+            continue;
+        }
+        availabilityStatusUserInput = std::tolower(availabilityStatusUserInput);
+
+        if (availabilityStatusUserInput == 'y')
+        {
+            availabilityStatus = true;
+        }
+        else if (availabilityStatusUserInput == 'n')
+        {
+            availabilityStatus = false;
+        }
+        else
+        {
+            std::cout << "Invalid input. Please enter 'y' for yes or 'n' for no." << std::endl;
+            continue;
+        }
+        break;
+    }
 
     std::string message = "ADD_MENU_ITEM:" + std::to_string(itemId) + ":" + itemName + ":" + std::to_string(itemPrice) + ":" + (availabilityStatus ? "true":"false");
     return message;

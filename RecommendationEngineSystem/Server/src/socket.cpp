@@ -67,6 +67,36 @@ void SocketConnection::initializeDatabase()
                            "meal_type ENUM('Breakfast', 'Lunch', 'Dinner'),"
                            "PRIMARY KEY (item_id, menu_date, meal_type),"
                            "FOREIGN KEY (item_id) REFERENCES MenuItems(item_id))");
+        statement->execute("CREATE TABLE IF NOT EXISTS Notifications("
+                           "notification_id INT AUTO_INCREMENT PRIMARY KEY,"
+                           "user_id VARCHAR(10),"
+                           "message VARCHAR(255),"
+                           "created_at DATETIME DEFAULT CURRENT_TIMESTAMP,"
+                           "FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE)");
+
+        statement->execute("ALTER TABLE Notifications RENAME TO OldNotifications");
+
+        statement->execute("CREATE TABLE IF NOT EXISTS Notifications("
+                           "notification_id INT AUTO_INCREMENT PRIMARY KEY,"
+                           "user_id VARCHAR(10),"
+                           "message VARCHAR(255),"
+                           "created_at DATETIME DEFAULT CURRENT_TIMESTAMP,"
+                           "FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE)");
+
+        statement->execute("INSERT INTO Notifications (notification_id, user_id, message, created_at) "
+                           "SELECT notification_id, user_id, message, created_at FROM OldNotifications");
+
+        statement->execute("DROP TABLE OldNotifications");
+
+        statement->execute("CREATE TRIGGER BeforeInsertNotification "
+                           "BEFORE INSERT ON Notifications "
+                           "FOR EACH ROW "
+                           "BEGIN "
+                           "  IF (SELECT role FROM Users WHERE user_id = NEW.user_id) != 'employee' THEN "
+                           "    SIGNAL SQLSTATE '45000' "
+                           "    SET MESSAGE_TEXT = 'Cannot add notification for non-employee user.'; "
+                           "  END IF; "
+                           "END;");
     }
     catch (sql::SQLException &e)
     {
@@ -112,13 +142,13 @@ int SocketConnection::accpetingConnection()
     return clientSocket;
 }
 
-void SocketConnection::receiveMessage(int clientSocket)
-{
-    char buffer[4096] = {0};
-    recv(clientSocket, buffer, sizeof(buffer), 0);
-    cout << "Message from client: " << buffer << endl;
-    send(clientSocket, "Hello from server!", 18, 0);
-}
+// void SocketConnection::receiveMessage(int clientSocket)
+// {
+//     char buffer[1024] = {0};
+//     recv(clientSocket, buffer, sizeof(buffer), 0);
+//     cout << "Message from client: " << buffer << endl;
+//     send(clientSocket, "Hello from server!", 18, 0);
+// }
 
 void SocketConnection::stopServer()
 {
@@ -132,9 +162,23 @@ void SocketConnection::handleRequest(int clientSocket)
     while (true)
     {
         char buffer[bufferSize] = {0};
-        read(clientSocket, buffer, bufferSize);
+        ssize_t bytesRead = read(clientSocket, buffer, bufferSize);
         std::string request(buffer);
         std::cout << "Request: " << request << std::endl;
+
+        if (bytesRead <= 0)
+        {
+            if (bytesRead == 0)
+            {
+                std::cout << "Client disconnected." << std::endl;
+            }
+            else
+            {
+                perror("Read error");
+            }
+            close(clientSocket);
+            break;
+        }
 
         std::istringstream ss(request);
         std::string command;
@@ -335,7 +379,7 @@ void SocketConnection::handleRequest(int clientSocket)
             }
             else
             {
-                response = responseData;
+                response = "Menu rolled out:"+ responseData;
             }
         }
         else if(command == "GET_RECOMMENDATION")
@@ -355,6 +399,58 @@ void SocketConnection::handleRequest(int clientSocket)
             }
 
             response = responseData;
+        }
+        else if (command == "ADD_NOTIFICATION")
+        {
+            std::string notificationMessage;
+            std::getline(ss, notificationMessage);
+            
+            if(addNotificationToDatabase(notificationMessage))
+            {
+                response = "Notification added successfully";
+            }
+            else
+            {
+                response = "Failed to add notification";
+            }
+        }
+        else if (command == "GET_NOTIFICATIONS")
+        {
+            std::string employeeId;
+            std::getline(ss, employeeId, ':');
+            std::string responseToBeSent;
+            auto notificationsList = getNotificationsFromDatabase(employeeId);
+            
+            for(auto& notification : notificationsList)
+            {
+                responseToBeSent += notification + "|";
+            }
+            if(!responseToBeSent.empty())
+            {
+                responseToBeSent.pop_back();
+            }
+
+            if(responseToBeSent.empty())
+            {
+                response = "No new notifications";
+            }
+            else
+            {
+                response = "New notifications:" + responseToBeSent;
+            }
+        }
+        else if (command == "DELETE_NOTIFICATIONS")
+        {
+            std::string userId;
+            std::getline(ss, userId, ':');
+            if (deleteNotificationsFromDatabase(userId))
+            {
+                response = "Notifications deleted successfully";
+            }
+            else
+            {
+                response = "Failed to delete notifications";
+            }
         }
 
         send(clientSocket, response.c_str(), response.length(), 0);
@@ -545,6 +641,67 @@ std::vector<DailyMenu> SocketConnection::getRolledOutMenuFromDatabase()
         std::cerr << "MySQL error: " << e.what() << std::endl;
     }
     return rolledOutMenu;
+}
+
+bool SocketConnection::addNotificationToDatabase(const std::string &notificationMessage)
+{
+    try
+    {
+        std::unique_ptr<sql::PreparedStatement> pStatement(database->getConnection()->prepareStatement(
+            "INSERT INTO Notifications (user_id, message) "
+            "SELECT user_id, ? "
+            "FROM Users "
+            "WHERE role = 'employee'"));
+        pStatement->setString(1, notificationMessage);
+        pStatement->execute();
+        return true;
+    }
+    catch (sql::SQLException &e)
+    {
+        std::cerr << "MySQL error: " << e.what() << std::endl;
+    }
+    return false;
+}
+
+std::vector<std::string> SocketConnection::getNotificationsFromDatabase(const std::string &employeeId)
+{
+    std::vector<std::string> notificationsList;
+    try
+    {
+        std::unique_ptr<sql::PreparedStatement> pStatement(database->getConnection()->prepareStatement(
+            "SELECT notification_id, message FROM Notifications WHERE user_id = ?"));
+        pStatement->setString(1, employeeId);
+        std::unique_ptr<sql::ResultSet> resultSet(pStatement->executeQuery());
+
+        // Process the fetched notifications and display them
+        while (resultSet->next()) 
+        {
+            int notificationId = resultSet->getInt("notification_id");
+            std::string message = resultSet->getString("message");
+            notificationsList.push_back(message);
+        }
+    }
+    catch (sql::SQLException& e)
+    {
+        std::cerr << "MySQL error: " << e.what() << std::endl;
+    }
+    return notificationsList;
+}
+
+bool SocketConnection::deleteNotificationsFromDatabase(const std::string &userId)
+{
+    try
+    {
+        std::unique_ptr<sql::PreparedStatement> pStatement(database->getConnection()->prepareStatement("DELETE FROM Notifications WHERE user_id = ?"));
+        pStatement->setString(1, userId);
+        pStatement->executeUpdate();
+        return true;
+    }
+    catch(sql::SQLException& exception)
+    {
+        std::cerr<<"MySQL error: "<<exception.what()<<std::endl;
+    }
+    return false;
 }
 
 // int main()
