@@ -54,5 +54,6 @@ public:
     bool addNotificationToDatabase(const std::string& notificationMessage);
     std::vector<std::string> getNotificationsFromDatabase(const std::string& employeeId);
     bool deleteNotificationsFromDatabase(const std::string& userId);
+    bool addVoteToDatabase(const int& itemId, const std::string& userId);
     // ~SocketConnection();
 };

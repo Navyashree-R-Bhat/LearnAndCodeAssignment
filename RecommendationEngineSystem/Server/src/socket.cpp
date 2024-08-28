@@ -15,12 +15,6 @@ SocketConnection::SocketConnection(int port, DatabaseConnection *database) : por
     createSocket();
     bindingSocket();
     initializeDatabase();
-    // database = new DatabaseConnection();
-    // database->connectDB();
-    // serverSocket = socket(AF_INET, SOCK_STREAM, 0);
-    // serverAddress.sin_family = AF_INET;
-    // serverAddress.sin_port = htons(8080);
-    // serverAddress.sin_addr.s_addr = INADDR_ANY;
 }
 
 void SocketConnection::createSocket()
@@ -97,6 +91,15 @@ void SocketConnection::initializeDatabase()
                            "    SET MESSAGE_TEXT = 'Cannot add notification for non-employee user.'; "
                            "  END IF; "
                            "END;");
+        
+        statement->execute("CREATE TABLE IF NOT EXISTS Votes("
+                           "vote_id INT AUTO_INCREMENT PRIMARY KEY,"
+                           "user_id VARCHAR(10),"
+                           "item_id INT,"
+                           "vote_date DATE DEFAULT (CURRENT_DATE),"
+                           "FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,"
+                           "FOREIGN KEY (item_id) REFERENCES DailyMenu (item_id) ON DELETE CASCADE,"
+                           "UNIQUE (user_id, item_id, vote_date))");
     }
     catch (sql::SQLException &e)
     {
@@ -141,14 +144,6 @@ int SocketConnection::accpetingConnection()
     }
     return clientSocket;
 }
-
-// void SocketConnection::receiveMessage(int clientSocket)
-// {
-//     char buffer[1024] = {0};
-//     recv(clientSocket, buffer, sizeof(buffer), 0);
-//     cout << "Message from client: " << buffer << endl;
-//     send(clientSocket, "Hello from server!", 18, 0);
-// }
 
 void SocketConnection::stopServer()
 {
@@ -452,6 +447,62 @@ void SocketConnection::handleRequest(int clientSocket)
                 response = "Failed to delete notifications";
             }
         }
+        else if (command == "VOTE")
+        {
+            std::string userId, token;
+            int itemId;
+            std::getline(ss, token, ':');
+            itemId = std::stoi(token);
+            std::getline(ss, userId, ':');
+
+            std::cout<<"Adding vote: ";
+            std::cout<<itemId<<" "<<userId<<std::endl;
+
+            if (addVoteToDatabase(itemId, userId))
+            {
+                response = "Vote successfully submitted";
+            }
+            else
+            {
+                response ="Failed to submit vote";
+            }
+        }
+        else if (command == "VIEW_VOTES")
+        {
+            std::cout<<"Viewing votes"<<std::endl;
+            std::string responseData;
+            
+            try
+            {
+                std::unique_ptr<sql::PreparedStatement> pStatement(database->getConnection()->prepareStatement(
+                    "SELECT dm.item_id, mi.item_name, COUNT(v.vote_id) AS total_votes "
+                    "FROM DailyMenu dm "
+                    "JOIN MenuItems mi ON dm.item_id = mi.item_id "
+                    "LEFT JOIN Votes v ON dm.item_id = v.item_id AND v.vote_date = CURDATE() "
+                    "WHERE dm.menu_date = CURDATE() "
+                    "GROUP BY dm.item_id, mi.item_name"
+                ));
+                std::unique_ptr<sql::ResultSet> resultSet(pStatement->executeQuery());
+
+                while (resultSet->next())
+                {
+                    int itemId = resultSet->getInt("item_id");
+                    std::string itemName = resultSet->getString("item_name");
+                    int totalVotes = resultSet->getInt("total_votes");
+
+                    responseData += std::to_string(itemId) + ":" + itemName + ":" + std::to_string(totalVotes) + "|";
+                }
+                if(!responseData.empty())
+                {
+                    responseData.pop_back();
+                }
+            }
+            catch (sql::SQLException &exception)
+            {
+                std::cerr << "MySQL error: " << exception.what() << std::endl;
+            }
+            response = responseData;
+        }
 
         send(clientSocket, response.c_str(), response.length(), 0);
         std::cout << "Response sent: " << response << std::endl;
@@ -704,15 +755,21 @@ bool SocketConnection::deleteNotificationsFromDatabase(const std::string &userId
     return false;
 }
 
-// int main()
-// {
-//     // DatabaseConnection database;
-//     // SocketConnection server(8080, &database);
-//     // server.bindingSocket();
-//     server.listeningToSocket();
-//     std::thread clientRequestThread(&SocketConnection::handleRequest, this);
-//     server.accpetingConnection();
-//     // server.receiveMessage();
-//     clientRequestThread.join();
-// 	return 0;
-// }
+bool SocketConnection::addVoteToDatabase(const int &itemId, const std::string &userId)
+{
+    try
+    {
+        std::unique_ptr<sql::PreparedStatement> pStatement(database->getConnection()->prepareStatement(
+            "INSERT INTO Votes (user_id, item_id, vote_date) VALUES (?, ?, CURRENT_DATE) "
+            "ON DUPLICATE KEY UPDATE vote_date = CURRENT_DATE"));
+        pStatement->setString(1, userId);
+        pStatement->setInt(2, itemId);
+        pStatement->executeUpdate();
+        return true;
+    }
+    catch(sql::SQLException& exception)
+    {
+        std::cerr<<"MySQL error: "<<exception.what()<<std::endl;
+    }
+    return false;
+}

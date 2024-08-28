@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <limits>
 
 class Employee
 {
@@ -13,4 +14,5 @@ public:
     std::string requestToViewMenuItem();
     std::string requestToProvideFeedback();
     std::string requestToViewRolledOutMenu();
+    std::string requestToVoteForRolledOutMenu();
 };

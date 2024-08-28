@@ -242,14 +242,15 @@ void Client::chefDisplayScreen()
     {
         Chef chef(userId, "CHEF", password);
         int choice = 0;
-        while(choice != 4)
+        while(choice != 5)
         {
             std::cout<<"\nWelcome to Chef page"<<std::endl;
             std::cout<<"Operations"<<std::endl;
             std::cout<<"1.View Menu"<<std::endl;
             std::cout<<"2.Get Recommendation"<<std::endl;
             std::cout<<"3.Roll out Menu Items"<<std::endl;
-            std::cout<<"4.Log out"<<std::endl;
+            std::cout<<"4.View Votes"<<std::endl;
+            std::cout<<"5.Log out"<<std::endl;
             std::cout<<"Enter your choice: ";
             std::cin>>choice;
             if (std::cin.fail()) 
@@ -276,8 +277,13 @@ void Client::chefDisplayScreen()
                         //Roll out Menu
                         request = chef.requestToRollOutMenu();
                         sendRequestToServerToRollOutMenu(request);
+                        sendRequestToAddNotification("Daily Menu Rolled Out");
                         break;
                     case 4:
+                        request = chef.requestToViewVotes();
+                        sendRequestToViewVotes(request);
+                        break;
+                    case 5:
                         break;
                     default:
                         std::cout << "You entered an invalid choice." << std::endl;
@@ -300,10 +306,10 @@ void Client::employeeDisplayScreen()
     {
         sendRequestToViewNotification(userId);
         Employee employee(userId, userName, password);
+        std::cout<<"\nWelcome to Employee page"<<std::endl;
         int choice = 0;
         while(choice != 5)
         {
-            std::cout<<"\nWelcome to Employee page"<<std::endl;
             std::cout<<"Operations"<<std::endl;
             std::cout<<"1.View Menu"<<std::endl;
             std::cout<<"2.View Daily Menu"<<std::endl;
@@ -341,6 +347,8 @@ void Client::employeeDisplayScreen()
                         break;
                     case 4:
                         //vote
+                        request = employee.requestToVoteForRolledOutMenu();
+                        sendRequestToServer(request);
                         break;
                     case 5:
                         break;
@@ -491,6 +499,41 @@ void Client::getRecommendations()
             std::cout << "Rating: " << fields[4] << "\n";
             std::cout << "Availability: " << (fields[3] == "1" ? "Yes" : "No") << "\n";
             std::cout << "------------------\n";
+        }
+    }
+}
+
+void Client::sendRequestToViewVotes(const std::string &request)
+{
+    send(client.clientSocket, request.c_str(), request.length(), 0);
+    
+    int bufferSize = 1024;
+    char response[bufferSize] = {0};
+    read(client.clientSocket, response, bufferSize);
+
+    std::istringstream voteListStream(response);
+    std::string itemVote;
+    std::vector<std::string> voteList;
+
+    std::cout<<"\nVOTING LIST\n";
+    while(std::getline(voteListStream, itemVote, '|'))
+    {
+        voteList.push_back(itemVote);
+    }
+    for(const auto &votedItem : voteList)
+    {
+        std::istringstream voteStream(votedItem);
+        std::string token;
+        std::vector<std::string> fields;
+        while(std::getline(voteStream, token, ':'))
+        {
+            fields.push_back(token);
+        }
+        if (fields.size() == 3)
+        {
+            std::cout<<"ID: "<<fields[0]
+                     <<"\tName: "<<fields[1]
+                     <<"\tNo of Votes: "<<fields[2] <<std::endl;
         }
     }
 }

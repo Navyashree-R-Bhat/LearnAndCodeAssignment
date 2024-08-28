@@ -35,6 +35,7 @@ public:
     void sendRequestToAddNotification(const std::string &notificationMessage);
     void sendRequestToViewNotification(const std::string &userId);
     void sendRequestToDeleteNotifications(const std::string &userId);
+    void sendRequestToViewVotes(const std::string &request);
 ;
 private:
     SocketConnection client;

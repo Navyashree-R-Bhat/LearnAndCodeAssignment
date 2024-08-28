@@ -12,4 +12,5 @@ public:
     Chef(const std::string &id, const std::string &name, const std::string &password);
     std::string requestToViewMenuItem();
     std::string requestToRollOutMenu();
+    std::string requestToViewVotes();
 };

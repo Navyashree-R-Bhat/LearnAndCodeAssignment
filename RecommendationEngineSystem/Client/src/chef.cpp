@@ -14,3 +14,9 @@ std::string Chef::requestToRollOutMenu()
     std::string message = "ROLL_OUT_MENU";
     return message;
 }
+
+std::string Chef::requestToViewVotes()
+{
+    std::string message = "VIEW_VOTES";
+    return message;
+}
