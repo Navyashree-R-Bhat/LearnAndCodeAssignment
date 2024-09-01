@@ -20,6 +20,7 @@ public:
     double getSentimentScore(const int& itemId);
     double getRatingScore(const int& itemId);
     double getTotalScore(const int& itemId);
+    std::vector<MenuItem> getDiscardedMenuItems();
 };
 
 class SentimentAnalyser

@@ -6,42 +6,43 @@ std::vector<std::pair<MenuItem, double>> RecommendationEngine::getRecommendedMen
 {
     std::vector<std::pair<MenuItem, double>> recommendationItems;
     std::vector<MenuItem> recommendedItems;
-    try {
-            std::unique_ptr<sql::Statement> statement(database->getConnection()->createStatement());
-            std::unique_ptr<sql::ResultSet> result(statement->executeQuery(
-                "SELECT mi.item_id, mi.item_name, mi.price, mi.availability_status, "
-                "IFNULL(AVG(f.rating), 0) AS average_rating "
-                "FROM MenuItems mi "
-                "LEFT JOIN Feedback f ON mi.item_id = f.item_id "
-                "GROUP BY mi.item_id, mi.item_name, mi.price, mi.availability_status "
-            ));
+    try 
+    {
+        std::unique_ptr<sql::Statement> statement(database->getConnection()->createStatement());
+        std::unique_ptr<sql::ResultSet> result(statement->executeQuery(
+            "SELECT mi.item_id, mi.item_name, mi.price, mi.availability_status, "
+            "IFNULL(AVG(f.rating), 0) AS average_rating "
+            "FROM MenuItems mi "
+            "LEFT JOIN Feedback f ON mi.item_id = f.item_id "
+            "GROUP BY mi.item_id, mi.item_name, mi.price, mi.availability_status "
+        ));
 
-            while (result->next()) {
-                MenuItem menuItem;
-                menuItem.setItemId(result->getInt("item_id"));
-                menuItem.setItemName(result->getString("item_name"));
-                menuItem.setItemPrice(result->getDouble("price"));
-                menuItem.setRating(result->getDouble("average_rating"));
-                menuItem.setAvailabilityStatus(result->getBoolean("availability_status"));
+        while (result->next()) {
+            MenuItem menuItem;
+            menuItem.setItemId(result->getInt("item_id"));
+            menuItem.setItemName(result->getString("item_name"));
+            menuItem.setItemPrice(result->getDouble("price"));
+            menuItem.setRating(result->getDouble("average_rating"));
+            menuItem.setAvailabilityStatus(result->getBoolean("availability_status"));
 
-                recommendedItems.push_back(menuItem);
-            }
-
-            for(auto& item : recommendedItems)
-            {
-                auto totalScore = getTotalScore(item.getItemId());
-                recommendationItems.push_back(std::make_pair(item,totalScore));
-            }
-
-            std::sort(recommendationItems.begin(), recommendationItems.end(),
-                  [](const std::pair<MenuItem, double>& a, const std::pair<MenuItem, double>& b) {
-                      return a.second > b.second;
-                  });
-        } 
-        catch (sql::SQLException &e) 
-        {
-            std::cerr << "SQL error: " << e.what() << std::endl;
+            recommendedItems.push_back(menuItem);
         }
+
+        for(auto& item : recommendedItems)
+        {
+            auto totalScore = getTotalScore(item.getItemId());
+            recommendationItems.push_back(std::make_pair(item,totalScore));
+        }
+
+        std::sort(recommendationItems.begin(), recommendationItems.end(),
+                [](const std::pair<MenuItem, double>& a, const std::pair<MenuItem, double>& b) {
+                    return a.second > b.second;
+                });
+    } 
+    catch (sql::SQLException &e) 
+    {
+        std::cerr << "SQL error: " << e.what() << std::endl;
+    }
 
         return recommendationItems;
 }
@@ -172,8 +173,37 @@ bool SentimentAnalyser::isNegationWord(const std::string& word) {
     }
 }
 
-// int main()
-// {
-//     SentimentAnalyser analyser("./sentimentWords.txt");
-//     std::cout<<analyser.calculateSentimentScore("It was too worst disgusting bad taste useless vile uneasy");
-// }
+std::vector<MenuItem> RecommendationEngine::getDiscardedMenuItems()
+{
+    int totalItems;
+    std::vector<std::pair<MenuItem, double>> recommendedItems;
+    std::vector<MenuItem> discardedMenuItems;
+    try 
+    {
+        std::unique_ptr<sql::Statement> statement(database->getConnection()->createStatement());
+        std::unique_ptr<sql::ResultSet> result(statement->executeQuery("SELECT COUNT(*) AS total_items FROM MenuItems"));
+
+        if (result->next()) 
+        {
+            totalItems = result->getInt("total_items");
+            std::cout << "Total number of items in the MenuItems table: " << totalItems << std::endl;
+        }
+        recommendedItems = getRecommendedMenuItems(totalItems);
+    } 
+    catch (sql::SQLException &exception) 
+    {
+        std::cerr << "MySQL error: " << exception.what() << std::endl;
+    }
+
+    for (auto &item:recommendedItems)
+    {
+        if(item.first.getRating() < 2 || (item.second < 0))
+        {
+            discardedMenuItems.push_back(item.first);
+            std::unique_ptr<sql::PreparedStatement> pStatement(database->getConnection()->prepareStatement("INSERT INTO DiscardedMenuItems (item_id) VALUES (?)"));
+            pStatement->setInt(1, item.first.getItemId());
+            pStatement->execute();
+        }
+    }
+    return discardedMenuItems;
+}

@@ -60,7 +60,7 @@ void SocketConnection::initializeDatabase()
                            "menu_date DATE DEFAULT (CURRENT_DATE),"
                            "meal_type ENUM('Breakfast', 'Lunch', 'Dinner'),"
                            "PRIMARY KEY (item_id, menu_date, meal_type),"
-                           "FOREIGN KEY (item_id) REFERENCES MenuItems(item_id))");
+                           "FOREIGN KEY (item_id) REFERENCES MenuItems(item_id) ON DELETE CASCADE)");
         statement->execute("CREATE TABLE IF NOT EXISTS Notifications("
                            "notification_id INT AUTO_INCREMENT PRIMARY KEY,"
                            "user_id VARCHAR(10),"
@@ -100,6 +100,27 @@ void SocketConnection::initializeDatabase()
                            "FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,"
                            "FOREIGN KEY (item_id) REFERENCES DailyMenu (item_id) ON DELETE CASCADE,"
                            "UNIQUE (user_id, item_id, vote_date))");
+        statement->execute("CREATE TABLE IF NOT EXISTS EmployeeProfile ("
+                           "user_id VARCHAR(10) PRIMARY KEY,"
+                           "food_preference ENUM('Vegetarian', 'Non Vegetarian', 'Eggetarian') NOT NULL,"
+                           "spice_level ENUM('High', 'Medium', 'Low') NOT NULL,"
+                           "preferred_cuisine ENUM('North Indian', 'South Indian', 'Other') NOT NULL,"
+                           "sweet_tooth BOOLEAN NOT NULL,"
+                           "FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE)");
+        statement->execute("CREATE TABLE IF NOT EXISTS DiscardedMenuItems ("
+                           "id INT AUTO_INCREMENT PRIMARY KEY,"
+                           "item_id INT NOT NULL,"
+                           "discarded_at DATETIME DEFAULT CURRENT_TIMESTAMP,"
+                           "FOREIGN KEY (item_id) REFERENCES MenuItems(item_id) ON DELETE CASCADE)");
+        statement->execute("CREATE TABLE IF NOT EXISTS DiscardMenuFeedback("
+                           "feedback_id INT AUTO_INCREMENT PRIMARY KEY, "
+                           "item_id INT,"
+                           "user_id VARCHAR(10),"
+                           "answer1 VARCHAR(255),"
+                           "answer2 VARCHAR(255),"
+                           "answer3 VARCHAR(255),"
+                           "FOREIGN KEY (item_id) REFERENCES MenuItems(item_id) ON DELETE CASCADE,"
+                           "FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE)");
     }
     catch (sql::SQLException &e)
     {
@@ -250,9 +271,16 @@ void SocketConnection::handleRequest(int clientSocket)
             itemPrice = std::stoi(word);
             std::getline(ss, word, ':');
             availabilityStatus = Utilities::stringToBool(word);
-            // availabilityStatus = word ? true:false;
             std::cout<<"ITEM: "<<itemId<<":"<<itemName<<":"<<itemPrice<<":"<<availabilityStatus<<std::endl;
             MenuItem menuItem(itemId, itemName, itemPrice, availabilityStatus);
+            std::getline(ss, word, ':');
+            menuItem.setFoodType(word);
+            std::getline(ss, word, ':');
+            menuItem.setSpiceLevel(word);
+            std::getline(ss, word, ':');
+            menuItem.setCuisineType(word);
+            std::getline(ss, word, ':');
+            menuItem.setIsSweet(Utilities::stringToBool(word));
             if(addMenuItemToDatabase(menuItem))
             {
                 response = "Menu Item added successfully";
@@ -266,7 +294,7 @@ void SocketConnection::handleRequest(int clientSocket)
         {
             std::cout<<"Deleting menu item"<<std::endl;
             std::string word;
-            std::getline(ss, word, ';');
+            std::getline(ss, word, ':');
             int itemId = std::stoi(word);
             std::cout<<"Item deleted: "<<itemId<<std::endl;
             if(deleteMenuItemFromDatabase(itemId))
@@ -355,13 +383,16 @@ void SocketConnection::handleRequest(int clientSocket)
         }
         else if(command == "VIEW_ROLLED_OUT_MENU")
         {
+            std::string userId;
+            std::getline(ss, userId);
             std::cout<<"Viewing rolled out menu"<<std::endl;
-            auto rolledOutMenuItemList = getRolledOutMenuFromDatabase();
+            auto rolledOutMenuItemList = getRolledOutMenuFromDatabase(userId);
 
             std::string responseData="";
             for (auto& item : rolledOutMenuItemList)
             {
-                responseData += item.getMenuDate() + ":" + std::to_string(item.getItemId()) + ":" + item.getItemName() + ":" + std::to_string(item.getItemPrice()) + ":" + std::to_string(item.getRating()) + "|";
+                responseData += item.getMenuDate() + ":" + std::to_string(item.getItemId()) + ":" + item.getItemName() + ":" + std::to_string(item.getItemPrice()) + ":" + std::to_string(item.getRating()) + ":" 
+                + item.getFoodType() + ":" + item.getSpiceLevel() + ":" + item.getCuisineType() + ":" + std::to_string(item.getIsSweet()) + "|";
             }
 
             if(!responseData.empty())
@@ -379,8 +410,12 @@ void SocketConnection::handleRequest(int clientSocket)
         }
         else if(command == "GET_RECOMMENDATION")
         {
+            std::string word;
+            int noOfRecommendation;
+            std::getline(ss, word, ':');
+            noOfRecommendation = std::stoi(word);
             RecommendationEngine recommendation(database);
-            auto recommendedItems = recommendation.getRecommendedMenuItems(2);
+            auto recommendedItems = recommendation.getRecommendedMenuItems(noOfRecommendation);
 
             std::string responseData;
             for (auto& item:recommendedItems)
@@ -503,6 +538,137 @@ void SocketConnection::handleRequest(int clientSocket)
             }
             response = responseData;
         }
+        else if (command == "UPDATE_PROFILE")
+        {
+            std::string userId, foodPreference, spiceLevel, cuisinePreference, sweetTooth;
+            bool isSweetTooth;
+            std::getline(ss, userId, ':');
+            std::getline(ss, foodPreference, ':');
+            std::getline(ss, spiceLevel, ':');
+            std::getline(ss, cuisinePreference, ':');
+            std::getline(ss, sweetTooth, ':');
+            isSweetTooth = (sweetTooth == "y") ? true : false;
+
+            try
+            {
+                std::unique_ptr<sql::PreparedStatement> pStatement(database->getConnection()->prepareStatement(
+                    "INSERT INTO EmployeeProfile (user_id, food_preference, spice_level, preferred_cuisine, sweet_tooth) "
+                    "VALUES (?, ?, ?, ?, ?) "
+                    "ON DUPLICATE KEY UPDATE "
+                    "food_preference = VALUES(food_preference), "
+                    "spice_level = VALUES(spice_level), "
+                    "preferred_cuisine = VALUES(preferred_cuisine), "
+                    "sweet_tooth = VALUES(sweet_tooth)"));
+                pStatement->setString(1, userId);
+                pStatement->setString(2, foodPreference);
+                pStatement->setString(3, spiceLevel);
+                pStatement->setString(4, cuisinePreference);
+                pStatement->setBoolean(5, isSweetTooth);
+                pStatement->executeUpdate();
+                response = "Profile Updated successfully";
+            }
+            catch (sql::SQLException &exception)
+            {
+                std::cerr << "MySQL error: " << exception.what() << std::endl;
+                response = "Profile Updation failed";
+            }
+        }
+        else if (command == "VIEW_DISCARD_MENU")
+        {
+            RecommendationEngine recommendationEngine(database);
+            auto discardMenuItems = recommendationEngine.getDiscardedMenuItems();
+            std::string responseData;
+            for (auto& item:discardMenuItems)
+            {
+                responseData += std::to_string(item.getItemId()) + ":" + item.getItemName() + ":" + std::to_string(item.getItemPrice()) + ":" + std::to_string(item.getAvailabilityStatus()) + ":" + std::to_string(item.getRating()) + "|";
+            }
+
+            if (!responseData.empty())
+            {
+                responseData.pop_back();
+            }
+            response = responseData;
+        }
+        else if (command == "DELETE_DISCARDED_MENU_ITEM")
+        {
+            std::cout<<"Deleting menu item"<<std::endl;
+            std::string word;
+            std::getline(ss, word, ':');
+            int itemId = std::stoi(word);
+            std::cout<<"Item deleted: "<<itemId<<std::endl;
+            try
+            {
+                std::unique_ptr<sql::PreparedStatement> pStatement(database->getConnection()->prepareStatement("SELECT COUNT(*) FROM DiscardedMenuItems WHERE item_id = ?"));
+                pStatement->setInt(1, itemId);
+                std::unique_ptr<sql::ResultSet> resultSet(pStatement->executeQuery());
+
+                resultSet->next();
+                int count = resultSet->getInt(1);
+
+                if (count > 0)
+                {
+                    std::unique_ptr<sql::PreparedStatement> deleteStatement(database->getConnection()->prepareStatement("DELETE FROM MenuItems WHERE item_id = ?"));
+                    deleteStatement->setInt(1, itemId);
+                    deleteStatement->execute();
+
+                    response = "Menu Item deleted successfully";
+                    std::cout << "Item deleted: " << itemId << std::endl;
+                }
+                else
+                {
+                    response = "Menu Item not found in discarded list";
+                    std::cout << "Item not found in discarded list: " << itemId << std::endl;
+                }
+            }
+            catch (sql::SQLException& exception)
+            {
+                std::cerr << "MySQL error: " << exception.what() << std::endl;
+                response = "Failed to delete Menu Item";
+            }
+        }
+        else if ("ADD_DISCARD_FEEDBACK")
+        {
+            std::string userId, answer1, answer2, answer3, token;
+            int itemId;
+            std::getline(ss, token, ':');
+            itemId = std::stoi(token);
+            std::getline(ss, userId, ':');
+            std::getline(ss, answer1, ':');
+            std::getline(ss, answer2, ':');
+            std::getline(ss, answer3, ':');
+            try
+            {
+                std::unique_ptr<sql::PreparedStatement> checkStatement(database->getConnection()->prepareStatement(
+                    "SELECT COUNT(*) FROM DiscardedMenuItems WHERE item_id = ?"));
+                checkStatement->setInt(1, itemId);
+                std::unique_ptr<sql::ResultSet> resultSet(checkStatement->executeQuery());
+
+                resultSet->next();
+                int count = resultSet->getInt(1);
+
+                if (count > 0)
+                {
+                    std::unique_ptr<sql::PreparedStatement> pStatement(database->getConnection()->prepareStatement(
+                        "INSERT INTO DiscardMenuFeedback (item_id, user_id, answer1, answer2, answer3) VALUES (?, ?, ?, ?, ?)"));
+                    pStatement->setInt(1, itemId);
+                    pStatement->setString(2, userId);
+                    pStatement->setString(3, answer1);
+                    pStatement->setString(4, answer2);
+                    pStatement->setString(5, answer3);
+                    pStatement->execute();
+                    response = "Discard Menu Feedback added successfully";
+                }
+                else
+                {
+                    response = "Item ID not found in Discarded Menu Items";
+                }
+            }
+            catch (sql::SQLException &e)
+            {
+                std::cerr << "MySQL error: " << e.what() << std::endl;
+                response = "Failed to add Discard Menu Feedback";
+            }
+        }
 
         send(clientSocket, response.c_str(), response.length(), 0);
         std::cout << "Response sent: " << response << std::endl;
@@ -584,11 +750,15 @@ bool SocketConnection::addMenuItemToDatabase(MenuItem &menuItem)
 {
     try
     {
-        std::unique_ptr<sql::PreparedStatement> pStatement(database->getConnection()->prepareStatement("INSERT INTO MenuItems (item_id, item_name, price, availability_status) VALUES (?, ?, ?, ?)"));
+        std::unique_ptr<sql::PreparedStatement> pStatement(database->getConnection()->prepareStatement("INSERT INTO MenuItems (item_id, item_name, price, availability_status, food_type, spice_level, cuisine_type, is_sweet) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"));
         pStatement->setInt(1, menuItem.getItemId());
         pStatement->setString(2, menuItem.getItemName());
         pStatement->setInt(3, menuItem.getItemPrice());
         pStatement->setBoolean(4, menuItem.getAvailabilityStatus());
+        pStatement->setString(5, menuItem.getFoodType());
+        pStatement->setString(6, menuItem.getSpiceLevel());
+        pStatement->setString(7, menuItem.getCuisineType());
+        pStatement->setBoolean(8, menuItem.getIsSweet());
         pStatement->execute();
         return true;
     }
@@ -659,22 +829,31 @@ bool SocketConnection::addFeedbackToDatabase(Feedback &feedback)
     return false;
 }
 
-std::vector<DailyMenu> SocketConnection::getRolledOutMenuFromDatabase()
+std::vector<DailyMenu> SocketConnection::getRolledOutMenuFromDatabase(const std::string& userId)
 {
     std::vector<DailyMenu> rolledOutMenu;
 
     try
     {
-        std::unique_ptr<sql::Statement> statement(database->getConnection()->createStatement());
-        std::unique_ptr<sql::ResultSet> result(statement->executeQuery(
+        std::unique_ptr<sql::PreparedStatement> pStatement(database->getConnection()->prepareStatement(
             "SELECT dm.menu_date, dm.item_id, mi.item_name, dm.meal_type, mi.price, "
-            "IFNULL(AVG(f.rating), 0) AS average_rating "
+            "IFNULL(AVG(f.rating), 0) AS average_rating, "
+            "mi.food_type, mi.spice_level, mi.cuisine_type, mi.is_sweet "
             "FROM DailyMenu dm "
             "JOIN MenuItems mi ON dm.item_id = mi.item_id "
             "LEFT JOIN Feedback f ON dm.item_id = f.item_id "
+            "JOIN EmployeeProfile ep ON ep.user_id = ? "
             "WHERE dm.menu_date = CURRENT_DATE "
-            "GROUP BY dm.menu_date, dm.item_id, dm.meal_type, mi.price"));
+            "GROUP BY dm.menu_date, dm.item_id, dm.meal_type, mi.price, mi.food_type, mi.spice_level, mi.cuisine_type, mi.is_sweet, "
+            "ep.food_preference, ep.spice_level, ep.preferred_cuisine, ep.sweet_tooth "
+            "ORDER BY "
+            "CASE WHEN mi.food_type = ep.food_preference THEN 1 ELSE 2 END, "
+            "CASE WHEN mi.spice_level = ep.spice_level THEN 1 ELSE 2 END, "
+            "CASE WHEN mi.cuisine_type = ep.preferred_cuisine THEN 1 ELSE 2 END, "
+            "CASE WHEN mi.is_sweet = ep.sweet_tooth THEN 1 ELSE 2 END"));
+        pStatement->setString(1, userId);
 
+        std::unique_ptr<sql::ResultSet> result(pStatement->executeQuery());
         while (result->next())
         {
             DailyMenu menu;
@@ -684,6 +863,10 @@ std::vector<DailyMenu> SocketConnection::getRolledOutMenuFromDatabase()
             menu.setMealType(result->getString("meal_type"));
             menu.setRating(result->getDouble("average_rating"));
             menu.setItemPrice(result->getInt("price"));
+            menu.setFoodType(result->getString("food_type"));
+            menu.setSpiceLevel(result->getString("spice_level"));
+            menu.setCuisineType(result->getString("cuisine_type"));
+            menu.setIsSweet(result->getBoolean("is_sweet"));
             rolledOutMenu.push_back(menu);
         }
     }
@@ -724,7 +907,6 @@ std::vector<std::string> SocketConnection::getNotificationsFromDatabase(const st
         pStatement->setString(1, employeeId);
         std::unique_ptr<sql::ResultSet> resultSet(pStatement->executeQuery());
 
-        // Process the fetched notifications and display them
         while (resultSet->next()) 
         {
             int notificationId = resultSet->getInt("notification_id");

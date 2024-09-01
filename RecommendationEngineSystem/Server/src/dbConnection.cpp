@@ -17,9 +17,3 @@ sql::Connection* DatabaseConnection::getConnection()
 {
     return connection;
 }
-
-// int main()
-// {
-//     DatabaseConnection db;
-//     db.connectDB();
-// }

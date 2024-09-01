@@ -33,15 +33,12 @@ void Client::start()
             switch (choice)
             {
             case 1:
-                // admin
                 adminDisplayScreen();
                 break;
             case 2:
-                // Chef
                 chefDisplayScreen();
                 break;
             case 3:
-                // Employee
                 employeeDisplayScreen();
                 break;
             case 4:
@@ -72,7 +69,6 @@ bool Client::authenticateUser(const std::string &userId, const std::string &pass
 
 void Client::adminDisplayScreen()
 {
-    // admin
     std::string userId, password;
     std::cout << "Enter user id: ";
     std::cin >> userId;
@@ -83,7 +79,7 @@ void Client::adminDisplayScreen()
     {
         Admin admin(userId, "ADMIN", password);
         int choice = 0;
-        while(choice != 6)
+        while(choice != 7)
         {
             std::cout<<"\nWelcome to Admin page"<<std::endl;
             std::cout<<"Operations"<<std::endl;
@@ -92,7 +88,8 @@ void Client::adminDisplayScreen()
             std::cout<<"3.View Menu"<<std::endl;
             std::cout<<"4.Delete User"<<std::endl;
             std::cout<<"5.Delete Food Item"<<std::endl;
-            std::cout<<"6.Log out"<<std::endl;
+            std::cout<<"6.Discard Menu Item List"<<std::endl;
+            std::cout<<"7.Log out"<<std::endl;
             std::cout<<"Enter your choice: ";
             std::cin>>choice;
             if (std::cin.fail()) 
@@ -129,6 +126,10 @@ void Client::adminDisplayScreen()
                         sendRequestToServer(request);
                         break;
                     case 6:
+                        sendRequestToDiscardMenuItem();
+                        performActionForDiscardMenu();
+                        break;
+                    case 7:
                         break;
                     default:
                         std::cout << "You entered an invalid choice." << std::endl;
@@ -175,15 +176,14 @@ void Client::sendRequestToServerToViewMenuItem(const std::string& request)
         if (fields.size() == 4)
         {
             std::cout << "ID: " << fields[0]
-                      << "\tName: " << fields[1]
-                      << "\t\tPrice: " << fields[2]
-                      << "\tAvailability: " << (fields[3] == "1" ? "Yes" : "No") << std::endl;
-        }
-    }
+                      << "Name: " << fields[1]
+                      << "\tPrice: " << fields[2]
+                      << "Availability: " << (fields[3] == "1" ? "Yes" : "No") << std::endl;
+        }   }
 }
 
 void Client::sendRequestToAddNotification(const std::string &notificationMessage)
-{
+{   
     std::string request;
     request = "ADD_NOTIFICATION:" + notificationMessage;
     sendRequestToServer(request);
@@ -270,11 +270,9 @@ void Client::chefDisplayScreen()
                         sendRequestToServerToViewMenuItem(request);
                         break;
                     case 2:
-                        //Recommendation
                         getRecommendations();
                         break;
                     case 3:
-                        //Roll out Menu
                         request = chef.requestToRollOutMenu();
                         sendRequestToServerToRollOutMenu(request);
                         sendRequestToAddNotification("Daily Menu Rolled Out");
@@ -308,20 +306,22 @@ void Client::employeeDisplayScreen()
         Employee employee(userId, userName, password);
         std::cout<<"\nWelcome to Employee page"<<std::endl;
         int choice = 0;
-        while(choice != 5)
+        while(choice != 7)
         {
             std::cout<<"Operations"<<std::endl;
             std::cout<<"1.View Menu"<<std::endl;
             std::cout<<"2.View Daily Menu"<<std::endl;
             std::cout<<"3.Provide feedback"<<std::endl;
             std::cout<<"4.Vote for Rolled out MenuItem"<<std::endl;
-            std::cout<<"5.Log out"<<std::endl;
+            std::cout<<"5.Update Profile"<<std::endl;
+            std::cout<<"6.Provide feedback for discard menu item"<<std::endl;
+            std::cout<<"7.Log out"<<std::endl;
             std::cout<<"Enter your choice: ";
             std::cin>>choice;
             if (std::cin.fail()) 
             {
-                std::cin.clear(); // Clear the error flag
-                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Ignore the invalid input
+                std::cin.clear();
+                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
                 std::cout << "Invalid input. Please enter a valid number." << std::endl;
                 continue;
             }
@@ -335,22 +335,27 @@ void Client::employeeDisplayScreen()
                         sendRequestToServerToViewMenuItem(request);
                         break;
                     case 2:
-                        //Daily Menu
                         request = employee.requestToViewRolledOutMenu();
                         sendRequestToServerToViewRolledOutMenu(request);
                         break;
                     case 3:
-                        //feedback
                         request = employee.requestToProvideFeedback();
                         sendRequestToServer(request);
-                        // sendFeedback();
                         break;
                     case 4:
-                        //vote
                         request = employee.requestToVoteForRolledOutMenu();
                         sendRequestToServer(request);
                         break;
                     case 5:
+                        request = employee.requestToUpdateEmployeeProfile();
+                        sendRequestToServer(request);
+                        break;
+                    case 6:
+                        sendRequestToDiscardMenuItem();
+                        request = employee.requestToProvideFeedbackForDiscardedMenu();
+                        sendRequestToServer(request);
+                        break;
+                    case 7:
                         break;
                     default:
                         std::cout << "You entered an invalid choice." << std::endl;
@@ -450,20 +455,28 @@ void Client::sendRequestToServerToViewRolledOutMenu(const std::string& message)
         {
             fields.push_back(token);
         }
-        if(fields.size() == 5)
+        if(fields.size() == 9)
         {
             std::cout <<"Date: " << fields[0]
-                    << "ID: " << fields[1]
-                    << "\tName: " << fields[2]
-                    << "\tPrice: " <<fields[3]
-                    << "\t\t Rating: " << fields[4] << std::endl;
+                    << " ID: " << fields[1]
+                    << " Name: " << fields[2]
+                    << " Price: " <<fields[3]
+                    << " Rating: " << fields[4] 
+                    << " Food type: " <<fields[5]
+                    << " Spice level: "<<fields[6]
+                    << " Cuisine type: " <<fields[7]
+                    << " Is sweet: " << (fields[8] == "1" ? "Yes" : "No") << std::endl;
         }
     }
 }
 
 void Client::getRecommendations()
 {
-    std::string request = "GET_RECOMMENDATION";
+    std::string request = "GET_RECOMMENDATION:";
+    int noOfRecommendations;
+    std::cout<<"Enter number of items to be recommended: ";
+    std::cin>>noOfRecommendations;
+    request += std::to_string(noOfRecommendations);
     send(client.clientSocket, request.c_str(), request.length(), 0);
     std::cout << "Recommendation request sent\n";
 
@@ -532,8 +545,71 @@ void Client::sendRequestToViewVotes(const std::string &request)
         if (fields.size() == 3)
         {
             std::cout<<"ID: "<<fields[0]
-                     <<"\tName: "<<fields[1]
-                     <<"\tNo of Votes: "<<fields[2] <<std::endl;
+                     <<"Name: "<<fields[1]
+                     <<"No of Votes: "<<fields[2] <<std::endl;
+        }  
+    }
+}
+
+void Client::sendRequestToDiscardMenuItem()
+{
+    std::string request = "VIEW_DISCARD_MENU";
+    send(client.clientSocket, request.c_str(), request.length(), 0);
+    int bufferSize = 1024;
+    char response[bufferSize] = {0};
+    read(client.clientSocket, response, bufferSize);
+    std::istringstream discardedMenuItemStream(response);
+    std::string menuItem;
+    std::vector<std::string> discardMenu;
+    while(std::getline(discardedMenuItemStream, menuItem, '|'))
+    {
+        discardMenu.push_back(menuItem);
+    }
+    std::cout<<"DISCARD MENU LIST"<<std::endl;
+    for(const auto &item : discardMenu)
+    {
+        std::istringstream itemStream(item);
+        std::string token;
+        std::vector<std::string> fields;
+        while(std::getline(itemStream, token, ':'))
+        {
+            fields.push_back(token);
         }
+
+        if (fields.size() == 5)
+        {
+            std::cout << "Item ID: " << fields[0] << "\n";
+            std::cout << "Food Item: " << fields[1] << "\n";
+            std::cout << "Price: " << fields[2] << "\n";
+            std::cout << "Rating: " << fields[4] << "\n";
+            std::cout << "Availability: " << (fields[3] == "1" ? "Yes" : "No") << "\n";
+            std::cout << "------------------\n";
+        }
+    }
+}
+
+void Client::sendRequestToDeleteDiscardMenu()
+{
+    int itemId;
+    std::cout<<"Enter the item ID to be deleted: ";
+    std::cin>>itemId;
+    std::string request = "DELETE_DISCARDED_MENU_ITEM:" + std::to_string(itemId);
+    sendRequestToServer(request);
+}
+
+void Client::performActionForDiscardMenu()
+{
+    int choice;
+    std::cout<<"How do you want to continue"<<std::endl;
+    std::cout<<"1.Discard Menu Item"<<std::endl;
+    std::cout<<"2.Receive Feedback from employee"<<std::endl;
+    std::cin>>choice;
+    if (choice == 1)
+    {
+        sendRequestToDeleteDiscardMenu();
+    }
+    else if (choice == 2)
+    {
+        sendRequestToAddNotification("Give suggestion for food item");
     }
 }

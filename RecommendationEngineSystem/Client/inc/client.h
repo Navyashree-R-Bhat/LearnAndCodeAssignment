@@ -36,6 +36,9 @@ public:
     void sendRequestToViewNotification(const std::string &userId);
     void sendRequestToDeleteNotifications(const std::string &userId);
     void sendRequestToViewVotes(const std::string &request);
+    void sendRequestToDiscardMenuItem();
+    void sendRequestToDeleteDiscardMenu();
+    void performActionForDiscardMenu();
 ;
 private:
     SocketConnection client;

@@ -30,6 +30,26 @@ void MenuItem::setRating(const int& rating)
     rating_ = rating;
 }
 
+void MenuItem::setFoodType(const std::string& foodType)
+{
+    foodType_ = foodType;
+}
+
+void MenuItem::setSpiceLevel(const std::string& spiceLevel)
+{
+    spiceLevel_ = spiceLevel;
+}
+
+void MenuItem::setCuisineType(const std::string& cuisineType)
+{
+    cuisineType_ = cuisineType;
+}
+
+void MenuItem::setIsSweet(const bool& isSweet)
+{
+    isSweet_ = isSweet;
+}
+
 int MenuItem::getItemId()
 {
     return itemId_;
@@ -55,3 +75,19 @@ int MenuItem::getRating()
     return rating_;
 }
 
+std::string MenuItem::getFoodType()
+{
+    return foodType_;
+}
+std::string MenuItem::getSpiceLevel()
+{
+    return spiceLevel_;
+}
+std::string MenuItem::getCuisineType()
+{
+    return cuisineType_;
+}
+bool MenuItem::getIsSweet()
+{
+    return isSweet_;
+}

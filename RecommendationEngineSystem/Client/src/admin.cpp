@@ -31,9 +31,9 @@ std::string Admin::requestToDeleteEmployee()
 std::string Admin::requestToAddMenuItem()
 {
     int itemId, itemPrice;
-    std::string itemName;
-    char availabilityStatusUserInput;
-    bool availabilityStatus;
+    std::string itemName, foodType, spiceLevel, cuisineType;
+    char availabilityStatusUserInput, sweetToothUserInput;
+    bool availabilityStatus, isSweetTooth;
 
     while(true)
     {
@@ -63,7 +63,7 @@ std::string Admin::requestToAddMenuItem()
         {
             std::cin.clear();
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            std::cout << "Invalid input. Please enter a valid number." << std::endl;
+            std::cout << "Invalid input. Please enter a valid option." << std::endl;
             continue;
         }
         availabilityStatusUserInput = std::tolower(availabilityStatusUserInput);
@@ -75,6 +75,52 @@ std::string Admin::requestToAddMenuItem()
         else if (availabilityStatusUserInput == 'n')
         {
             availabilityStatus = false;
+        }
+        else
+        {
+            std::cout << "Invalid input. Please enter 'y' for yes or 'n' for no." << std::endl;
+            continue;
+        }
+
+        std::cout<<"Enter the Food Type['Vegetarian', 'Non Vegetarian', 'Eggetarian']: ";
+        std::getline(std::cin, foodType);
+        if(foodType != "Vegetarian" && foodType != "Non Vegetarian" && foodType != "Eggetarian")
+        {
+            std::cout<<"Invalid option entered"<<std::endl;
+            continue;
+        }
+        std::cout<<"Enter the Spice Level['High', 'Medium', 'Low']: ";
+        std::getline(std::cin, spiceLevel);
+        if(spiceLevel != "High" && spiceLevel != "Medium" && spiceLevel != "Low")
+        {
+            std::cout<<"Invalid option entered"<<std::endl;
+            continue;
+        }
+        std::cout<<"Enter the Cuisine Type['North Indian', 'South Indian', 'Other']: ";
+        std::getline(std::cin, cuisineType);
+        if(cuisineType != "North Indian" && cuisineType != "South Indian" && cuisineType != "Other")
+        {
+            std::cout<<"Invalid option entered"<<std::endl;
+            continue;
+        }
+        std::cout<<"Enter the sweet tooth[y/n]: ";
+        std::cin>>sweetToothUserInput;
+        sweetToothUserInput = std::tolower(sweetToothUserInput);
+        if (std::cin.fail() && sweetToothUserInput != 'y' && sweetToothUserInput != 'n') 
+        {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "Invalid input. Please enter a valid option." << std::endl;
+            continue;
+        }
+
+        if (sweetToothUserInput == 'y')
+        {
+            isSweetTooth = true;
+        }
+        else if (sweetToothUserInput == 'n')
+        {
+            isSweetTooth = false;
         }
         else
         {

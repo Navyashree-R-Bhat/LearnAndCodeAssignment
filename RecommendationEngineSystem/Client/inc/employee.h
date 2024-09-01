@@ -15,4 +15,6 @@ public:
     std::string requestToProvideFeedback();
     std::string requestToViewRolledOutMenu();
     std::string requestToVoteForRolledOutMenu();
+    std::string requestToUpdateEmployeeProfile();
+    std::string requestToProvideFeedbackForDiscardedMenu();
 };

@@ -25,6 +25,26 @@ void DailyMenu::setRating(const int& rating)
     rating_ = rating;
 }
 
+void DailyMenu::setFoodType(const std::string& foodType)
+{
+    foodType_ = foodType;
+}
+
+void DailyMenu::setSpiceLevel(const std::string& spiceLevel)
+{
+    spiceLevel_ = spiceLevel;
+}
+
+void DailyMenu::setCuisineType(const std::string& cuisineType)
+{
+    cuisineType_ = cuisineType;
+}
+
+void DailyMenu::setIsSweet(const bool& isSweet)
+{
+    isSweet_ = isSweet;
+}
+
 void DailyMenu::setItemPrice(const int& itemPrice)
 {
     itemPrice_ = itemPrice;
@@ -58,4 +78,21 @@ int DailyMenu::getRating()
 int DailyMenu::getItemPrice()
 {
     return itemPrice_;
+}
+
+std::string DailyMenu::getFoodType()
+{
+    return foodType_;
+}
+std::string DailyMenu::getSpiceLevel()
+{
+    return spiceLevel_;
+}
+std::string DailyMenu::getCuisineType()
+{
+    return cuisineType_;
+}
+bool DailyMenu::getIsSweet()
+{
+    return isSweet_;
 }

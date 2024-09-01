@@ -50,10 +50,9 @@ public:
     bool deleteMenuItemFromDatabase(const int& itemId);
     std::vector<MenuItem> viewMenuItem();
     bool addFeedbackToDatabase(Feedback& feedback);
-    std::vector<DailyMenu> getRolledOutMenuFromDatabase();
+    std::vector<DailyMenu> getRolledOutMenuFromDatabase(const std::string& employeeId);
     bool addNotificationToDatabase(const std::string& notificationMessage);
     std::vector<std::string> getNotificationsFromDatabase(const std::string& employeeId);
     bool deleteNotificationsFromDatabase(const std::string& userId);
     bool addVoteToDatabase(const int& itemId, const std::string& userId);
-    // ~SocketConnection();
 };

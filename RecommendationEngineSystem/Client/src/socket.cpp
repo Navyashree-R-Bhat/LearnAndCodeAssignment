@@ -11,9 +11,6 @@ SocketConnection::SocketConnection(int port) : port(port), clientSocket(0)
     memset(&address, 0, sizeof(address)); 
     createSocket();
     connectToServer();
-	// serverAddress.sin_family = AF_INET; 
-	// serverAddress.sin_port = htons(8080); 
-	// serverAddress.sin_addr.s_addr = INADDR_ANY;
 }
 
 void SocketConnection::createSocket()
@@ -29,12 +26,6 @@ void SocketConnection::connectToServer()
 {
     address.sin_family = AF_INET;
     address.sin_port = htons(port);
-
-    // if (inet_pton(AF_INET, serverAddress.c_str(), &address.sin_addr) <= 0)
-    // {
-    //     perror("Invalid address/Address not supported");
-    //     exit(EXIT_FAILURE);
-    // }
 
     if (connect(clientSocket, (struct sockaddr *)&address, sizeof(address)) < 0)
     {

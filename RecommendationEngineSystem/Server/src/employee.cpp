@@ -1,5 +1,9 @@
 #include "employee.h"
 
+Employee::Employee()
+{
+}
+
 Employee::Employee(const std::string& employeeId, const std::string& employeeName, const std::string& password, const std::string& role)
                    : employeeId(employeeId), employeeName(employeeName), password(password), role(role) {}
 
