@@ -50,5 +50,3 @@ SocketConnection::~SocketConnection()
 {
     close(clientSocket);
 }
-
-
