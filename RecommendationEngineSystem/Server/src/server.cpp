@@ -1,4 +1,4 @@
-#include "socket.h"
+#include "server.h"
 
 #include <cstring>
 #include <iostream>
@@ -9,7 +9,7 @@
 
 using namespace std;
 
-SocketConnection::SocketConnection(int port, DatabaseConnection *database) : port(port), database(database), serverSocket(0), clientSocket(0), addressLength(sizeof(serverAddress))
+Server::Server(int port, DatabaseConnection *database) : port(port), database(database), serverSocket(0), clientSocket(0), addressLength(sizeof(serverAddress))
 {
     memset(&serverAddress, 0, sizeof(serverAddress));
     createSocket();
@@ -17,7 +17,7 @@ SocketConnection::SocketConnection(int port, DatabaseConnection *database) : por
     initializeDatabase();
 }
 
-void SocketConnection::createSocket()
+void Server::createSocket()
 {
     if ((serverSocket = socket(AF_INET, SOCK_STREAM, 0)) == 0)
     {
@@ -25,13 +25,13 @@ void SocketConnection::createSocket()
         exit(EXIT_FAILURE);
     }
 }
-void SocketConnection::waitForExit(SocketConnection &server)
+void Server::waitForExit(Server &server)
 {
     cin.get();
     server.stopServer();
 }
 
-void SocketConnection::initializeDatabase()
+void Server::initializeDatabase()
 {
     try
     {
@@ -133,7 +133,7 @@ void SocketConnection::initializeDatabase()
     }
 }
 
-void SocketConnection::bindingSocket()
+void Server::bindingSocket()
 {
     int option = 1;
     if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &option, sizeof(option)))
@@ -151,7 +151,7 @@ void SocketConnection::bindingSocket()
     }
 }
 
-void SocketConnection::listeningToSocket()
+void Server::listeningToSocket()
 {
     if (listen(serverSocket, 3) < 0)
     {
@@ -160,7 +160,7 @@ void SocketConnection::listeningToSocket()
     }
 }
 
-int SocketConnection::accpetingConnection()
+int Server::accpetingConnection()
 {
     if ((clientSocket = accept(serverSocket, (sockaddr *)&serverAddress, (socklen_t *)&addressLength)) < 0)
     {
@@ -170,14 +170,14 @@ int SocketConnection::accpetingConnection()
     return clientSocket;
 }
 
-void SocketConnection::stopServer()
+void Server::stopServer()
 {
     stopFlag = true;
     close(clientSocket);
     close(serverSocket);
 }
 
-void SocketConnection::handleRequest(int clientSocket)
+void Server::handleRequest(int clientSocket)
 {
     while (true)
     {
@@ -714,18 +714,18 @@ void SocketConnection::handleRequest(int clientSocket)
     }
 }
 
-void SocketConnection::run()
+void Server::run()
 {
     listeningToSocket();
     while (true)
     {
         int clientSocket = accpetingConnection();
-        std::thread clientRequestThread(&SocketConnection::handleRequest, this, clientSocket);
+        std::thread clientRequestThread(&Server::handleRequest, this, clientSocket);
         clientRequestThread.detach();
     }
 }
 
-bool SocketConnection::validateUser(const std::string &userId, const std::string &password, const std::string &role)
+bool Server::validateUser(const std::string &userId, const std::string &password, const std::string &role)
 {
     try
     {
@@ -749,7 +749,7 @@ bool SocketConnection::validateUser(const std::string &userId, const std::string
     return false;
 }
 
-bool SocketConnection::addEmployeeToDatabase(Employee& employee)
+bool Server::addEmployeeToDatabase(Employee& employee)
 {
     try
     {
@@ -768,7 +768,7 @@ bool SocketConnection::addEmployeeToDatabase(Employee& employee)
     return false;
 }
 
-bool SocketConnection::deleteEmployeeFromDatabase(const std::string& userId)
+bool Server::deleteEmployeeFromDatabase(const std::string& userId)
 {
     try
     {
@@ -784,7 +784,7 @@ bool SocketConnection::deleteEmployeeFromDatabase(const std::string& userId)
     return false;
 }
 
-bool SocketConnection::addMenuItemToDatabase(MenuItem &menuItem)
+bool Server::addMenuItemToDatabase(MenuItem &menuItem)
 {
     try
     {
@@ -807,7 +807,7 @@ bool SocketConnection::addMenuItemToDatabase(MenuItem &menuItem)
     return false;
 }
 
-bool SocketConnection::deleteMenuItemFromDatabase(const int &itemId)
+bool Server::deleteMenuItemFromDatabase(const int &itemId)
 {
     try
     {
@@ -823,7 +823,7 @@ bool SocketConnection::deleteMenuItemFromDatabase(const int &itemId)
     return false;
 }
 
-std::vector<MenuItem> SocketConnection::viewMenuItem()
+std::vector<MenuItem> Server::viewMenuItem()
 {
     std::vector<MenuItem> menuItems;
     try
@@ -847,7 +847,7 @@ std::vector<MenuItem> SocketConnection::viewMenuItem()
     return menuItems;
 }
 
-bool SocketConnection::addFeedbackToDatabase(Feedback &feedback)
+bool Server::addFeedbackToDatabase(Feedback &feedback)
 {
     try
     {
@@ -867,7 +867,7 @@ bool SocketConnection::addFeedbackToDatabase(Feedback &feedback)
     return false;
 }
 
-std::vector<DailyMenu> SocketConnection::getRolledOutMenuFromDatabase(const std::string& userId)
+std::vector<DailyMenu> Server::getRolledOutMenuFromDatabase(const std::string& userId)
 {
     std::vector<DailyMenu> rolledOutMenu;
 
@@ -915,7 +915,7 @@ std::vector<DailyMenu> SocketConnection::getRolledOutMenuFromDatabase(const std:
     return rolledOutMenu;
 }
 
-std::vector<DailyMenu> SocketConnection::getRolledOutMenuForParticularFoodType(const std::string &userId)
+std::vector<DailyMenu> Server::getRolledOutMenuForParticularFoodType(const std::string &userId)
 {
     std::cout<<"---------------------914"<<std::endl;
     std::vector<DailyMenu> rolledOutMenu;
@@ -966,7 +966,7 @@ std::vector<DailyMenu> SocketConnection::getRolledOutMenuForParticularFoodType(c
 
 }
 
-bool SocketConnection::addNotificationToDatabase(const std::string &notificationMessage)
+bool Server::addNotificationToDatabase(const std::string &notificationMessage)
 {
     try
     {
@@ -986,7 +986,7 @@ bool SocketConnection::addNotificationToDatabase(const std::string &notification
     return false;
 }
 
-std::vector<std::string> SocketConnection::getNotificationsFromDatabase(const std::string &employeeId)
+std::vector<std::string> Server::getNotificationsFromDatabase(const std::string &employeeId)
 {
     std::vector<std::string> notificationsList;
     try
@@ -1010,7 +1010,7 @@ std::vector<std::string> SocketConnection::getNotificationsFromDatabase(const st
     return notificationsList;
 }
 
-bool SocketConnection::deleteNotificationsFromDatabase(const std::string &userId)
+bool Server::deleteNotificationsFromDatabase(const std::string &userId)
 {
     try
     {
@@ -1026,7 +1026,7 @@ bool SocketConnection::deleteNotificationsFromDatabase(const std::string &userId
     return false;
 }
 
-bool SocketConnection::addVoteToDatabase(const int &itemId, const std::string &userId)
+bool Server::addVoteToDatabase(const int &itemId, const std::string &userId)
 {
     try
     {

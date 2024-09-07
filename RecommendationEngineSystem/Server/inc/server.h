@@ -19,7 +19,7 @@
 #define PORT 8080
 
 
-class SocketConnection
+class Server
 {
 public:
     int port;
@@ -31,7 +31,7 @@ public:
     std::atomic<bool> stopFlag = false;
     DatabaseConnection *database;
 
-    SocketConnection(int port, DatabaseConnection *database);
+    Server(int port, DatabaseConnection *database);
     void bindingSocket();
     void createSocket();
     void handleRequest(int clientSocket);
@@ -39,7 +39,7 @@ public:
     int accpetingConnection();
     void receiveMessage(int clientSocket);
     void sendMessage(const std::string& message);
-    static void waitForExit(SocketConnection& server);
+    static void waitForExit(Server& server);
     void run();
     void initializeDatabase();
     void stopServer();
