@@ -136,3 +136,9 @@ std::string Employee::requestToProvideFeedbackForDiscardedMenu()
     return message;
 
 }
+
+std::string Employee::requestToViewRolledOutMenuForParticularFoodType()
+{
+    std::string message = "VIEW_ROLLED_OUT_MENU_FOR_FOOD_TYPE:" + employeeId_;
+    return message;
+}

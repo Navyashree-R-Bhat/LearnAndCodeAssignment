@@ -46,7 +46,11 @@ void SocketConnection::initializeDatabase()
                            "item_id INT PRIMARY KEY,"
                            "item_name VARCHAR(255) NOT NULL,"
                            "price DECIMAL(10, 2) NOT NULL,"
-                           "availability_status BOOLEAN NOT NULL)");
+                           "availability_status BOOLEAN NOT NULL,"
+                           "food_type ENUM('Vegetarian', 'Non Vegetarian', 'Eggetarian') NOT NULL,"
+                           "spice_level ENUM('High', 'Medium', 'Low') NOT NULL,"
+                           "cuisine_type ENUM('North Indian', 'South Indian', 'Other') NOT NULL,"
+                           "is_sweet BOOLEAN NOT NULL)");
         statement->execute("CREATE TABLE IF NOT EXISTS Feedback("
                            "feedback_id INT AUTO_INCREMENT PRIMARY KEY, "
                            "item_id INT,"
@@ -392,7 +396,41 @@ void SocketConnection::handleRequest(int clientSocket)
             for (auto& item : rolledOutMenuItemList)
             {
                 responseData += item.getMenuDate() + ":" + std::to_string(item.getItemId()) + ":" + item.getItemName() + ":" + std::to_string(item.getItemPrice()) + ":" + std::to_string(item.getRating()) + ":" 
-                + item.getFoodType() + ":" + item.getSpiceLevel() + ":" + item.getCuisineType() + ":" + std::to_string(item.getIsSweet()) + "|";
+                + item.getMealType() + ":" + item.getFoodType() + ":" + item.getSpiceLevel() + ":" + item.getCuisineType() + ":" + std::to_string(item.getIsSweet()) + "|";
+            }
+
+            if(!responseData.empty())
+            {
+                responseData.pop_back();
+            }
+            if(responseData.empty())
+            {
+                response = "Daily Menu not yet rolled out";
+            }
+            else
+            {
+                response = "Menu rolled out:"+ responseData;
+            }
+        }
+        else if(command == "VIEW_ROLLED_OUT_MENU_FOR_FOOD_TYPE")
+        {
+            std::string userId;
+            std::getline(ss, userId);
+            if (userId.empty()) 
+            {
+                std::cerr << "Error: Invalid or empty userId provided." << std::endl;
+                response = "Invalid user ID";
+                return;
+            }
+            std::cout<<"-----------:"<<userId<<std::endl;
+            std::cout<<"Viewing rolled out menu"<<std::endl;
+            auto rolledOutMenuItemList = getRolledOutMenuForParticularFoodType(userId);
+
+            std::string responseData="";
+            for (auto& item : rolledOutMenuItemList)
+            {
+                responseData += item.getMenuDate() + ":" + std::to_string(item.getItemId()) + ":" + item.getItemName() + ":" + std::to_string(item.getItemPrice()) + ":" + std::to_string(item.getRating()) + ":" 
+                + item.getMealType() + ":" + item.getFoodType() + ":" + item.getSpiceLevel() + ":" + item.getCuisineType() + ":" + std::to_string(item.getIsSweet()) + "|";
             }
 
             if(!responseData.empty())
@@ -875,6 +913,57 @@ std::vector<DailyMenu> SocketConnection::getRolledOutMenuFromDatabase(const std:
         std::cerr << "MySQL error: " << e.what() << std::endl;
     }
     return rolledOutMenu;
+}
+
+std::vector<DailyMenu> SocketConnection::getRolledOutMenuForParticularFoodType(const std::string &userId)
+{
+    std::cout<<"---------------------914"<<std::endl;
+    std::vector<DailyMenu> rolledOutMenu;
+
+    try
+    {
+        std::unique_ptr<sql::PreparedStatement> pStatement(database->getConnection()->prepareStatement(
+            "SELECT dm.menu_date, dm.item_id, mi.item_name, dm.meal_type, mi.price, "
+            "IFNULL(AVG(f.rating), 0) AS average_rating, "
+            "mi.food_type, mi.spice_level, mi.cuisine_type, mi.is_sweet "
+            "FROM DailyMenu dm "
+            "JOIN MenuItems mi ON dm.item_id = mi.item_id "
+            "LEFT JOIN Feedback f ON dm.item_id = f.item_id "
+            "JOIN EmployeeProfile ep ON ep.user_id = ? "
+            "WHERE dm.menu_date = CURRENT_DATE "
+            "AND mi.food_type = ep.food_preference "
+            "GROUP BY dm.menu_date, dm.item_id, dm.meal_type, mi.price, mi.food_type, mi.spice_level, mi.cuisine_type, mi.is_sweet, "
+            "ep.food_preference, ep.spice_level, ep.preferred_cuisine, ep.sweet_tooth "
+            "ORDER BY "
+            "CASE WHEN mi.food_type = ep.food_preference THEN 1 ELSE 2 END, "
+            "CASE WHEN mi.spice_level = ep.spice_level THEN 1 ELSE 2 END, "
+            "CASE WHEN mi.cuisine_type = ep.preferred_cuisine THEN 1 ELSE 2 END, "
+            "CASE WHEN mi.is_sweet = ep.sweet_tooth THEN 1 ELSE 2 END"));
+        pStatement->setString(1, userId);
+
+        std::unique_ptr<sql::ResultSet> result(pStatement->executeQuery());
+        while (result->next())
+        {
+            DailyMenu menu;
+            menu.setMenuDate(result->getString("menu_date"));
+            menu.setItemId(result->getInt("item_id"));
+            menu.setItemName(result->getString("item_name"));
+            menu.setMealType(result->getString("meal_type"));
+            menu.setRating(result->getDouble("average_rating"));
+            menu.setItemPrice(result->getInt("price"));
+            menu.setFoodType(result->getString("food_type"));
+            menu.setSpiceLevel(result->getString("spice_level"));
+            menu.setCuisineType(result->getString("cuisine_type"));
+            menu.setIsSweet(result->getBoolean("is_sweet"));
+            rolledOutMenu.push_back(menu);
+        }
+    }
+    catch (sql::SQLException& e)
+    {
+        std::cerr << "MySQL error: " << e.what() << std::endl;
+    }
+    return rolledOutMenu;
+
 }
 
 bool SocketConnection::addNotificationToDatabase(const std::string &notificationMessage)

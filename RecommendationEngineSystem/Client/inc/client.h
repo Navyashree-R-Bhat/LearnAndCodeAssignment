@@ -39,6 +39,7 @@ public:
     void sendRequestToDiscardMenuItem();
     void sendRequestToDeleteDiscardMenu();
     void performActionForDiscardMenu();
+    void requestForViewingEntireMenu(Employee &employee);
 ;
 private:
     SocketConnection client;

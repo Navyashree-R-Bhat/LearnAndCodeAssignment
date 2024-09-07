@@ -24,8 +24,10 @@ std::vector<std::pair<MenuItem, double>> RecommendationEngine::getRecommendedMen
             menuItem.setItemPrice(result->getDouble("price"));
             menuItem.setRating(result->getDouble("average_rating"));
             menuItem.setAvailabilityStatus(result->getBoolean("availability_status"));
-
-            recommendedItems.push_back(menuItem);
+            if (menuItem.getRating() > 0)
+            {
+                recommendedItems.push_back(menuItem);
+            }
         }
 
         for(auto& item : recommendedItems)
@@ -44,7 +46,11 @@ std::vector<std::pair<MenuItem, double>> RecommendationEngine::getRecommendedMen
         std::cerr << "SQL error: " << e.what() << std::endl;
     }
 
-        return recommendationItems;
+    if (recommendationItems.size() > noOfItems) 
+    {
+        recommendationItems.resize(noOfItems);
+    }
+    return recommendationItems;
 }
 
 SentimentAnalyser::SentimentAnalyser(const std::string& filename)
@@ -133,7 +139,6 @@ double SentimentAnalyser::calculateSentimentScore(const std::string& comment)
     int negationEffectCounter = 0;
 
     while (ss >> word) {
-        std::cout<<word<<std::endl;
         std::transform(word.begin(), word.end(), word.begin(), ::tolower);
         word.erase(std::remove_if(word.begin(), word.end(), ::ispunct), word.end());
         if (isNegationWord(word)) {

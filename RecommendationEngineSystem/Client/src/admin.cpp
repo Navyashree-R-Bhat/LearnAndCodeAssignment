@@ -45,9 +45,10 @@ std::string Admin::requestToAddMenuItem()
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
             std::cout << "Invalid input. Please enter a valid number." << std::endl;
             continue;
-        } 
+        }
+        std::cin.ignore();
         std::cout<<"Enter the name of the item: ";
-        std::cin>>itemName;
+        std::getline(std::cin, itemName);
         std::cout<<"Enter the price for the item: ";
         std::cin>>itemPrice;
         if (std::cin.fail()) 
@@ -81,7 +82,7 @@ std::string Admin::requestToAddMenuItem()
             std::cout << "Invalid input. Please enter 'y' for yes or 'n' for no." << std::endl;
             continue;
         }
-
+        std::cin.ignore();
         std::cout<<"Enter the Food Type['Vegetarian', 'Non Vegetarian', 'Eggetarian']: ";
         std::getline(std::cin, foodType);
         if(foodType != "Vegetarian" && foodType != "Non Vegetarian" && foodType != "Eggetarian")
@@ -130,7 +131,7 @@ std::string Admin::requestToAddMenuItem()
         break;
     }
 
-    std::string message = "ADD_MENU_ITEM:" + std::to_string(itemId) + ":" + itemName + ":" + std::to_string(itemPrice) + ":" + (availabilityStatus ? "true":"false");
+    std::string message = "ADD_MENU_ITEM:" + std::to_string(itemId) + ":" + itemName + ":" + std::to_string(itemPrice) + ":" + (availabilityStatus ? "true":"false") + ":" + foodType + ":" + spiceLevel + ":" + cuisineType + ":" + std::to_string(isSweetTooth);
     return message;
 }
 

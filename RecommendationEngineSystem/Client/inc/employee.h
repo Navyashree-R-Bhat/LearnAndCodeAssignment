@@ -17,4 +17,5 @@ public:
     std::string requestToVoteForRolledOutMenu();
     std::string requestToUpdateEmployeeProfile();
     std::string requestToProvideFeedbackForDiscardedMenu();
+    std::string requestToViewRolledOutMenuForParticularFoodType();
 };

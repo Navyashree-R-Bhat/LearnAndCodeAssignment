@@ -55,7 +55,6 @@ bool Client::authenticateUser(const std::string &userId, const std::string &pass
     bool status = false;
     std::string request = "VALIDATE:" + userId + ":" + password + ":" + role;
     send(client.clientSocket, request.c_str(), request.length(), 0);
-    std::cout << "Authentication request sent\n";
     const int bufferSize = 1024;
     char buffer[bufferSize] = {0};
     read(client.clientSocket, buffer, sizeof(buffer));
@@ -176,9 +175,9 @@ void Client::sendRequestToServerToViewMenuItem(const std::string& request)
         if (fields.size() == 4)
         {
             std::cout << "ID: " << fields[0]
-                      << "Name: " << fields[1]
+                      << " Name: " << fields[1]
                       << "\tPrice: " << fields[2]
-                      << "Availability: " << (fields[3] == "1" ? "Yes" : "No") << std::endl;
+                      << " Availability: " << (fields[3] == "1" ? "Yes" : "No") << std::endl;
         }   }
 }
 
@@ -296,8 +295,6 @@ void Client::employeeDisplayScreen()
     std::string userId, userName, password;
     std::cout<<"Enter user id: ";
     std::cin>>userId;
-    std::cout << "Enter user name: ";
-    std::cin >> userName;
     std::cout<<"Enter password: ";
     std::cin>>password;
     if (authenticateUser(userId, password, "employee"))
@@ -335,8 +332,9 @@ void Client::employeeDisplayScreen()
                         sendRequestToServerToViewMenuItem(request);
                         break;
                     case 2:
-                        request = employee.requestToViewRolledOutMenu();
+                        request = employee.requestToViewRolledOutMenuForParticularFoodType();
                         sendRequestToServerToViewRolledOutMenu(request);
+                        requestForViewingEntireMenu(employee);
                         break;
                     case 3:
                         request = employee.requestToProvideFeedback();
@@ -408,12 +406,29 @@ void Client::sendRequestToServerToRollOutMenu(const std::string& message)
             continue;
         }
         request += std::to_string(itemId) + '|' + mealType + ':';
-        char continueFlag;
+        char option;
         std::cout<<"Do you want to continue y/n: ";
-        std::cin>>continueFlag;
-        if(continueFlag=='n')
+        option = std::tolower(option);
+        if (std::cin.fail() && option != 'y' && option != 'n') 
+        {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "Invalid input. Please enter a valid option." << std::endl;
+            continue;
+        }
+
+        if (option == 'y')
+        {
+            continue;
+        }
+        else if (option == 'n')
         {
             break;
+        }
+        else
+        {
+            std::cout << "Invalid input. Please enter 'y' for yes or 'n' for no." << std::endl;
+            continue;
         }
         std::cin.ignore();
     }
@@ -455,19 +470,21 @@ void Client::sendRequestToServerToViewRolledOutMenu(const std::string& message)
         {
             fields.push_back(token);
         }
-        if(fields.size() == 9)
+        if(fields.size() == 10)
         {
             std::cout <<"Date: " << fields[0]
                     << " ID: " << fields[1]
                     << " Name: " << fields[2]
                     << " Price: " <<fields[3]
                     << " Rating: " << fields[4] 
-                    << " Food type: " <<fields[5]
-                    << " Spice level: "<<fields[6]
-                    << " Cuisine type: " <<fields[7]
-                    << " Is sweet: " << (fields[8] == "1" ? "Yes" : "No") << std::endl;
+                    << " Meal type: " << fields[5]
+                    << " Food type: " <<fields[6]
+                    << " Spice level: "<<fields[7]
+                    << " Cuisine type: " <<fields[8]
+                    << " Is sweet: " << (fields[9] == "1" ? "Yes" : "No") << std::endl;
         }
     }
+
 }
 
 void Client::getRecommendations()
@@ -507,6 +524,7 @@ void Client::getRecommendations()
 
         if (fields.size() == 5)
         {
+            std::cout << "Item ID: " << fields[0] << "\n";
             std::cout << "Food Item: " << fields[1] << "\n";
             std::cout << "Price: " << fields[2] << "\n";
             std::cout << "Rating: " << fields[4] << "\n";
@@ -545,8 +563,8 @@ void Client::sendRequestToViewVotes(const std::string &request)
         if (fields.size() == 3)
         {
             std::cout<<"ID: "<<fields[0]
-                     <<"Name: "<<fields[1]
-                     <<"No of Votes: "<<fields[2] <<std::endl;
+                     <<" Name: "<<fields[1]
+                     <<" No of Votes: "<<fields[2] <<std::endl;
         }  
     }
 }
@@ -611,5 +629,39 @@ void Client::performActionForDiscardMenu()
     else if (choice == 2)
     {
         sendRequestToAddNotification("Give suggestion for food item");
+    }
+}
+
+void Client::requestForViewingEntireMenu(Employee& employee)
+{
+    char option;
+    while(true)
+    {
+        std::cout<<"Do you want to view entire menu [y/n]: ";
+        std::cin>>option;
+        option = std::tolower(option);
+        if (std::cin.fail() && option != 'y' && option != 'n') 
+        {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "Invalid input. Please enter a valid option." << std::endl;
+            continue;
+        }
+
+        if (option == 'y')
+        {
+            auto request = employee.requestToViewRolledOutMenu();
+            sendRequestToServerToViewRolledOutMenu(request);
+            break;
+        }
+        else if (option == 'n')
+        {
+            break;
+        }
+        else
+        {
+            std::cout << "Invalid input. Please enter 'y' for yes or 'n' for no." << std::endl;
+            continue;
+        }
     }
 }
